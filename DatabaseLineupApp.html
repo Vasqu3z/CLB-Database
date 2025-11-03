@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      padding: 20px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: white;
+      padding: 25px 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .header p {
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 0;
+      min-height: 700px;
+    }
+
+    .field-section {
+      padding: 30px;
+      background: #f8f9fa;
+      position: relative;
+    }
+
+    .sidebar {
+      padding: 25px 20px;
+      background: white;
+      border-left: 2px solid #e9ecef;
+      overflow-y: auto;
+      max-height: 700px;
+    }
+
+    /* Baseball Field Styling */
+    .field-container {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #2d5016 0%, #3a6b1e 50%, #2d5016 100%);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+
+    .field-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .infield-diamond {
+      position: absolute;
+      top: 60%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 40%;
+      height: 40%;
+      background: rgba(139, 90, 43, 0.3);
+      border: 3px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .position {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+      border: 3px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+
+    .position:hover {
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      border-color: #667eea;
+      border-width: 4px;
+    }
+
+    .position.filled {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #667eea;
+      color: white;
+    }
+
+    .position.filled:hover {
+      border-color: #ffffff;
+    }
+
+    .position.dragging {
+      opacity: 0.5;
+      cursor: grabbing;
+    }
+
+    .position.drag-over {
+      border: 3px dashed #28a745;
+      background: rgba(40, 167, 69, 0.1);
+    }
+
+    /* Glow effects for chemistry */
+    .position.glow-positive {
+      box-shadow: 0 0 20px rgba(40, 167, 69, 0.6), 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .position.glow-negative {
+      box-shadow: 0 0 20px rgba(220, 53, 69, 0.6), 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .position.glow-mixed {
+      box-shadow: 0 0 20px rgba(255, 193, 7, 0.6), 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .position-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .position-name {
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      padding: 0 8px;
+      max-width: 100%;
+      line-height: 1.1;
+      word-break: break-word;
+      white-space: normal;
+      height: 24px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .position.filled .position-label {
+      color: rgba(255,255,255,0.9);
+    }
+
+    /* Position locations - corrected baseball positions */
+    .pos-p { top: 58%; left: 50%; transform: translate(-50%, -50%); }
+    .pos-c { top: 85%; left: 50%; transform: translate(-50%, -50%); }
+    .pos-1b { top: 58%; left: 75%; transform: translate(-50%, -50%); }
+    .pos-2b { top: 42%; left: 65%; transform: translate(-50%, -50%); }
+    .pos-3b { top: 58%; left: 25%; transform: translate(-50%, -50%); }
+    .pos-ss { top: 42%; left: 35%; transform: translate(-50%, -50%); }
+    .pos-lf { top: 20%; left: 25%; transform: translate(-50%, -50%); }
+    .pos-cf { top: 12%; left: 50%; transform: translate(-50%, -50%); }
+    .pos-rf { top: 20%; left: 75%; transform: translate(-50%, -50%); }
+
+    /* Chemistry Lines SVG */
+    #chemistryLines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .chemistry-line {
+      stroke-width: 4;
+      fill: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .chemistry-line.visible {
+      opacity: 0.8;
+    }
+
+    .chemistry-line.positive {
+      stroke: #28a745;
+    }
+
+    .chemistry-line.negative {
+      stroke: #dc3545;
+    }
+
+    .chemistry-line.strong {
+      stroke-width: 5;
+      opacity: 0.9;
+    }
+
+    /* Toggle Chemistry Button */
+    .toggle-chemistry-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      padding: 8px 16px;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 6px;
+      color: #667eea;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      z-index: 20;
+    }
+
+    .toggle-chemistry-btn:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .toggle-chemistry-btn.active {
+      background: #667eea;
+      color: white;
+    }
+
+    /* Tooltip for hover */
+    .position-tooltip {
+      position: absolute;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+      display: none;
+    }
+
+    /* Sidebar Sections */
+    .sidebar-section {
+      margin-bottom: 25px;
+    }
+
+    .sidebar-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #212529;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e9ecef;
+    }
+
+    /* Chemistry Stats */
+    .chemistry-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .stat-box {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      border: 2px solid #dee2e6;
+    }
+
+    .stat-box.positive {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+
+    .stat-box.negative {
+      background: #f8d7da;
+      border-color: #dc3545;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #6c757d;
+      margin-bottom: 4px;
+    }
+
+    .stat-box.positive .stat-label {
+      color: #155724;
+    }
+
+    .stat-box.negative .stat-label {
+      color: #721c24;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #212529;
+    }
+
+    .stat-box.positive .stat-value {
+      color: #28a745;
+    }
+
+    .stat-box.negative .stat-value {
+      color: #dc3545;
+    }
+
+    /* Batting Order */
+    .batting-order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .batting-order-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .batting-order-item:hover {
+      border-color: #667eea;
+      background: #e7f1ff;
+    }
+
+    .batting-order-item.filled {
+      background: white;
+      cursor: grab;
+    }
+
+    .batting-order-item.filled:active {
+      cursor: grabbing;
+    }
+
+    .batting-order-item.dragging {
+      opacity: 0.5;
+    }
+
+    .batting-order-item.drag-over {
+      border-color: #28a745;
+      background: rgba(40, 167, 69, 0.1);
+    }
+
+    /* Batting order chemistry borders */
+    .batting-order-item.filled {
+      border-bottom: 3px solid transparent;
+    }
+
+    .batting-order-item.filled.chem-next-positive {
+      border-bottom-color: #28a745;
+    }
+
+    .batting-order-item.filled.chem-next-negative {
+      border-bottom-color: #dc3545;
+    }
+
+    /* First batter shows chemistry with 9th at top */
+    .batting-order-item:first-child.filled {
+      border-top: 3px solid transparent;
+    }
+
+    .batting-order-item:first-child.filled.chem-prev-positive {
+      border-top-color: #28a745;
+    }
+
+    .batting-order-item:first-child.filled.chem-prev-negative {
+      border-top-color: #dc3545;
+    }
+
+    /* Glow for overall batting order chemistry */
+    .batting-order-item.glow-positive {
+      box-shadow: 0 0 12px rgba(40, 167, 69, 0.4);
+    }
+
+    .batting-order-item.glow-negative {
+      box-shadow: 0 0 12px rgba(220, 53, 69, 0.4);
+    }
+
+    .batting-order-item.glow-mixed {
+      box-shadow: 0 0 12px rgba(255, 193, 7, 0.4);
+    }
+
+    .batting-number {
+      width: 28px;
+      height: 28px;
+      background: #667eea;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .batting-order-item.empty .batting-number {
+      background: #dee2e6;
+      color: #6c757d;
+    }
+
+    .batting-player-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .batting-player-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #212529;
+      flex: 1;
+    }
+
+    .batting-order-item.empty .batting-player-name {
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    .position-badge {
+      background: #667eea;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    /* Player Suggestions */
+    .suggestions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .suggestion-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .suggestion-item:hover {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+
+    .suggestion-player-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+      color: #212529;
+    }
+
+    .suggestion-chemistry {
+      font-size: 14px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .suggestion-chemistry.positive {
+      color: #28a745;
+      background: #d4edda;
+    }
+
+    .suggestion-chemistry.negative {
+      color: #dc3545;
+      background: #f8d7da;
+    }
+
+    .no-suggestions {
+      padding: 20px;
+      text-align: center;
+      color: #6c757d;
+      font-style: italic;
+      font-size: 13px;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      padding: 20px 25px;
+      border-bottom: 2px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #212529;
+      margin: 0;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: #6c757d;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+      background: #f8f9fa;
+      color: #212529;
+    }
+
+    .modal-search {
+      padding: 15px 25px;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 15px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .modal-body {
+      padding: 15px 25px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .player-option {
+      padding: 12px 15px;
+      background: #f8f9fa;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      font-weight: 500;
+      color: #212529;
+    }
+
+    .player-option:hover {
+      background: #e7f1ff;
+      border-color: #667eea;
+    }
+
+    .player-option.selected {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .modal-actions {
+      padding: 15px 25px;
+      border-top: 2px solid #e9ecef;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c82333;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: #5568d3;
+    }
+
+    .action-btn.secondary {
+      background: #6c757d;
+    }
+
+    .action-btn.secondary:hover {
+      background: #5a6268;
+    }
+
+    .action-btn.success {
+      background: #28a745;
+    }
+
+    .action-btn.success:hover {
+      background: #218838;
+    }
+
+    /* Save/Load Section */
+    .save-load-section {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 2px solid #e9ecef;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .lineup-name-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .lineup-name-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .lineup-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 10px;
+      background: white;
+    }
+
+    .lineup-select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    /* Export Modal */
+    .export-text {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+
+    /* Update Banner */
+    .update-banner {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .update-banner.show {
+      display: block;
+    }
+
+    .update-banner-text {
+      font-size: 14px;
+      color: #856404;
+      margin-bottom: 10px;
+    }
+
+    .update-banner-btn {
+      padding: 8px 16px;
+      background: #ffc107;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .update-banner-btn:hover {
+      background: #e0a800;
+    }
+
+    /* Loading State */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚾ Lineup Builder</h1>
+      <p>Build your perfect lineup with chemistry visualization</p>
+    </div>
+
+    <div class="content">
+      <!-- Baseball Field Section -->
+      <div class="field-section">
+        <div id="updateBanner" class="update-banner">
+          <div class="update-banner-text">⚠️ Chemistry data has been updated. Refresh to see latest changes.</div>
+          <button class="update-banner-btn" onclick="refreshChemistryData()">🔄 Refresh Data</button>
+        </div>
+
+        <div class="field-container">
+          <button class="toggle-chemistry-btn" onclick="toggleAllChemistry()">Show All Chemistry</button>
+          
+          <div class="infield-diamond"></div>
+          
+          <svg id="chemistryLines" class="field-lines"></svg>
+          
+          <!-- Positions -->
+          <div class="position pos-p" data-position="P">
+            <div class="position-label">P</div>
+            <div class="position-name">Pitcher</div>
+          </div>
+          <div class="position pos-c" data-position="C">
+            <div class="position-label">C</div>
+            <div class="position-name">Catcher</div>
+          </div>
+          <div class="position pos-1b" data-position="1B">
+            <div class="position-label">1B</div>
+            <div class="position-name">First Base</div>
+          </div>
+          <div class="position pos-2b" data-position="2B">
+            <div class="position-label">2B</div>
+            <div class="position-name">Second Base</div>
+          </div>
+          <div class="position pos-3b" data-position="3B">
+            <div class="position-label">3B</div>
+            <div class="position-name">Third Base</div>
+          </div>
+          <div class="position pos-ss" data-position="SS">
+            <div class="position-label">SS</div>
+            <div class="position-name">Shortstop</div>
+          </div>
+          <div class="position pos-lf" data-position="LF">
+            <div class="position-label">LF</div>
+            <div class="position-name">Left Field</div>
+          </div>
+          <div class="position pos-cf" data-position="CF">
+            <div class="position-label">CF</div>
+            <div class="position-name">Center Field</div>
+          </div>
+          <div class="position pos-rf" data-position="RF">
+            <div class="position-label">RF</div>
+            <div class="position-name">Right Field</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Team Chemistry Stats -->
+        <div class="sidebar-section">
+          <h3>Team Chemistry</h3>
+          <div class="chemistry-stats">
+            <div class="stat-box positive">
+              <div class="stat-label">Positive</div>
+              <div class="stat-value" id="positiveCount">0</div>
+            </div>
+            <div class="stat-box negative">
+              <div class="stat-label">Negative</div>
+              <div class="stat-value" id="negativeCount">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Total</div>
+              <div class="stat-value" id="totalChemistry">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Batting Order -->
+        <div class="sidebar-section">
+          <h3>Batting Order</h3>
+          <div class="batting-order-list" id="battingOrderList">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Player Suggestions -->
+        <div class="sidebar-section" id="suggestionsSection" style="display: none;">
+          <h3>Suggested Players</h3>
+          <div class="suggestions-list" id="suggestionsList">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Save/Load Section -->
+        <div class="sidebar-section save-load-section">
+          <h3>Save & Load</h3>
+          
+          <!-- Save Lineup -->
+          <div class="input-group">
+            <input type="text" id="lineupNameInput" class="lineup-name-input" placeholder="Lineup name...">
+            <button class="btn btn-primary" onclick="saveCurrentLineup()">Save</button>
+          </div>
+          
+          <!-- Load Lineup -->
+          <select id="savedLineupsSelect" class="lineup-select">
+            <option value="">-- Load saved lineup --</option>
+          </select>
+          <div class="input-group">
+            <button class="btn btn-primary" style="flex: 1;" onclick="loadSelectedLineup()">Load</button>
+            <button class="btn btn-danger" onclick="deleteSelectedLineup()">Delete</button>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="sidebar-section">
+          <h3>Actions</h3>
+          <div class="action-buttons">
+            <button class="action-btn success" onclick="exportAsText()">📋 Export as Text</button>
+            <button class="action-btn secondary" onclick="clearLineup()">Clear All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Selection Modal -->
+  <div id="playerModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Select Player</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-search">
+        <input type="text" id="playerSearch" class="search-input" placeholder="Search players...">
+      </div>
+      <div class="modal-body">
+        <div id="playerList" class="player-list">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="removePlayer()" id="removeBtn" style="display: none;">Remove</button>
+        <button class="btn btn-primary" onclick="confirmSelection()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Text Modal -->
+  <div id="exportModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Export Lineup</h2>
+        <button class="close-btn" onclick="closeExportModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="export-text" id="exportText"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeExportModal()">Close</button>
+        <button class="btn btn-primary" onclick="copyExportText()">Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="positionTooltip" class="position-tooltip"></div>
+
+  <script>
+    let allPlayers = [];
+    let chemistryData = null;
+    let lineup = {};
+    let battingOrder = [];
+    let currentPosition = null;
+    let selectedPlayer = null;
+    let draggedPosition = null;
+    let draggedBattingIndex = null;
+    let showAllChemistry = false;
+
+    window.onload = function() {
+      checkForUpdates();
+      loadPlayers();
+      initializeBattingOrder();
+      setupPositionListeners();
+      setupBattingOrderListeners();
+      loadSavedLineupsList();
+    };
+
+    /**
+   * Checks whether chemistry data has changed since last update
+   * and toggles the update banner if needed.
+   */
+  function checkForUpdates() {
+    google.script.run
+      .withSuccessHandler(status => {
+        const banner = document.getElementById('updateBanner');
+        if (status?.needsUpdate) {
+          banner.classList.add('show');
+        } else {
+          banner.classList.remove('show');
+        }
+      })
+      .withFailureHandler(error => {
+        console.error('[LineupBuilder] Failed to check updates:', error);
+      })
+      .checkIfChemistryDataNeedsUpdate();
+  }
+
+    /**
+   * Refreshes chemistry data (calls backend JSON update).
+   * Shows a loading banner, then updates player lists and chemistry matrix.
+   */
+  function refreshChemistryData() {
+    const banner = document.getElementById('updateBanner');
+    const setBanner = (msg, cls = '') => {
+      banner.innerHTML = `<div class="update-banner-text ${cls}">${msg}</div>`;
+      banner.classList.add('show');
+    };
+
+    setBanner('🔄 Updating chemistry data...');
+
+    google.script.run
+      .withSuccessHandler(() => {
+        setBanner('✅ Data updated! Reloading...', 'success');
+        setTimeout(() => {
+          banner.classList.remove('show');
+          chemistryData = null;
+          lineup = {};
+          battingOrder = [];
+          loadPlayers();
+          initializeBattingOrder();
+          clearChemistryDisplay();
+        }, 600);
+      })
+      .withFailureHandler(error => {
+        console.error('[LineupBuilder] Update failed:', error);
+        setBanner('❌ Update failed. Please try again.', 'error');
+      })
+      .updateChemistryDataJSON(); // Now correctly references your backend
+  }
+
+    function loadPlayers() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          chemistryData = data;
+          allPlayers = data.players.sort();
+        })
+        .withFailureHandler(showError)
+        .getLineupChemistryDataFromJSON();
+    }
+
+    // FIXED: Simplified position listeners using native drag-and-drop
+    function setupPositionListeners() {
+      const positions = document.querySelectorAll('.position');
+      positions.forEach(pos => {
+        // Simple click for opening modal
+        pos.addEventListener('click', function(e) {
+          const position = this.dataset.position;
+          openPlayerModal(position);
+        });
+        
+        // Drag handlers for swapping positions
+        pos.addEventListener('dragstart', function(e) {
+          const position = this.dataset.position;
+          if (!lineup[position]) {
+            e.preventDefault();
+            return;
+          }
+          draggedPosition = position;
+          this.style.opacity = '0.5';
+        });
+        
+        pos.addEventListener('dragover', handlePositionDragOver);
+        pos.addEventListener('drop', handlePositionDrop);
+        pos.addEventListener('dragleave', handlePositionDragLeave);
+        pos.addEventListener('dragend', function(e) {
+          this.style.opacity = '';
+          draggedPosition = null;
+        });
+        
+        // Hover for chemistry lines
+        pos.addEventListener('mouseenter', handlePositionHover);
+        pos.addEventListener('mouseleave', handlePositionLeave);
+      });
+    }
+
+    function handlePositionDragOver(e) {
+      e.preventDefault();
+      const targetPosition = this.dataset.position;
+      if (draggedPosition && draggedPosition !== targetPosition) {
+        this.classList.add('drag-over');
+      }
+    }
+
+    function handlePositionDrop(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      
+      const targetPosition = this.dataset.position;
+      if (!draggedPosition || draggedPosition === targetPosition) return;
+      
+      // Swap players between positions
+      const draggedPlayer = lineup[draggedPosition];
+      const targetPlayer = lineup[targetPosition];
+      
+      lineup[targetPosition] = draggedPlayer;
+      lineup[draggedPosition] = targetPlayer;
+      
+      updatePosition(targetPosition, draggedPlayer);
+      updatePosition(draggedPosition, targetPlayer);
+      
+      updateBattingOrder();
+      updateChemistryDisplay();
+      updateSuggestions();
+    }
+
+    function handlePositionDragLeave(e) {
+      this.classList.remove('drag-over');
+    }
+
+    function handlePositionHover(e) {
+      const position = this.dataset.position;
+      const player = lineup[position];
+      
+      if (player && !showAllChemistry) {
+        drawChemistryLinesForPlayer(player);
+        showPlayerTooltip(e, player, position);
+      }
+    }
+
+    function handlePositionLeave(e) {
+      if (!showAllChemistry) {
+        clearChemistryLines();
+      }
+      hideTooltip();
+    }
+
+    function showPlayerTooltip(e, player, position) {
+      const tooltip = document.getElementById('positionTooltip');
+      const rect = e.target.getBoundingClientRect();
+      
+      // Get chemistry connections
+      const connections = [];
+      Object.keys(lineup).forEach(pos => {
+        if (pos !== position && lineup[pos]) {
+          const chem = getChemistry(player, lineup[pos]);
+          const thresholds = chemistryData.thresholds;
+          
+          if (chem >= thresholds.POSITIVE_MIN) {
+            connections.push(`✓ ${lineup[pos]} (+${Math.round(chem / 100)})`);
+          } else if (chem <= thresholds.NEGATIVE_MAX) {
+            connections.push(`✗ ${lineup[pos]} (${Math.round(chem / 100)})`);
+          }
+        }
+      });
+      
+      if (connections.length > 0) {
+        tooltip.innerHTML = connections.join('<br>');
+        tooltip.style.display = 'block';
+        tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+        tooltip.style.top = (rect.top - 10) + 'px';
+        tooltip.style.transform = 'translate(-50%, -100%)';
+      }
+    }
+
+    function hideTooltip() {
+      document.getElementById('positionTooltip').style.display = 'none';
+    }
+
+    function setupBattingOrderListeners() {
+      const orderList = document.getElementById('battingOrderList');
+      
+      orderList.addEventListener('dragover', function(e) {
+        e.preventDefault();
+      });
+      
+      orderList.addEventListener('drop', function(e) {
+        e.preventDefault();
+      });
+    }
+
+    function initializeBattingOrder() {
+      const orderList = document.getElementById('battingOrderList');
+      orderList.innerHTML = '';
+      
+      for (let i = 1; i <= 9; i++) {
+        const item = document.createElement('div');
+        item.className = 'batting-order-item empty';
+        item.dataset.order = i;
+        item.draggable = false;
+        item.innerHTML = `
+          <div class="batting-number">${i}</div>
+          <div class="batting-player-info">
+            <div class="batting-player-name">Empty</div>
+          </div>
+        `;
+        
+        item.addEventListener('click', function() {
+          handleBattingOrderClick(i);
+        });
+        
+        // Drag handlers for batting order
+        item.addEventListener('dragstart', function(e) {
+          if (!battingOrder[i - 1]) {
+            e.preventDefault();
+            return;
+          }
+          draggedBattingIndex = i - 1;
+          this.classList.add('dragging');
+        });
+        
+        item.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          if (draggedBattingIndex !== null && draggedBattingIndex !== (i - 1)) {
+            this.classList.add('drag-over');
+          }
+        });
+        
+        item.addEventListener('drop', function(e) {
+          e.preventDefault();
+          this.classList.remove('drag-over');
+          
+          if (draggedBattingIndex === null || draggedBattingIndex === (i - 1)) return;
+          
+          // Swap batting order
+          const temp = battingOrder[draggedBattingIndex];
+          battingOrder[draggedBattingIndex] = battingOrder[i - 1];
+          battingOrder[i - 1] = temp;
+          
+          updateBattingOrderDisplay();
+          updateChemistryDisplay();
+        });
+        
+        item.addEventListener('dragleave', function(e) {
+          this.classList.remove('drag-over');
+        });
+        
+        item.addEventListener('dragend', function(e) {
+          this.classList.remove('dragging');
+          draggedBattingIndex = null;
+        });
+        
+        // Hover for batting order tooltips
+        item.addEventListener('mouseenter', function(e) {
+          if (battingOrder[i - 1]) {
+            showBattingOrderTooltip(e, i - 1);
+          }
+        });
+        
+        item.addEventListener('mouseleave', function() {
+          hideTooltip();
+        });
+        
+        orderList.appendChild(item);
+      }
+    }
+
+    function showBattingOrderTooltip(e, index) {
+      const tooltip = document.getElementById('positionTooltip');
+      const player = battingOrder[index];
+      if (!player) return;
+      
+      const prevIndex = index === 0 ? 8 : index - 1;
+      const nextIndex = index === 8 ? 0 : index + 1;
+      
+      const prevPlayer = battingOrder[prevIndex];
+      const nextPlayer = battingOrder[nextIndex];
+      
+      const messages = [];
+      const thresholds = chemistryData.thresholds;
+      
+      if (prevPlayer) {
+        const chemPrev = getChemistry(player, prevPlayer);
+        if (chemPrev >= thresholds.POSITIVE_MIN) {
+          messages.push(`✓ Gets stat boost if ${prevPlayer} is on base`);
+        } else if (chemPrev <= thresholds.NEGATIVE_MAX) {
+          messages.push(`✗ Negative chemistry with ${prevPlayer}`);
+        }
+      }
+      
+      if (nextPlayer) {
+        const chemNext = getChemistry(player, nextPlayer);
+        if (chemNext >= thresholds.POSITIVE_MIN) {
+          messages.push(`✓ Receives items from ${nextPlayer} while hitting`);
+        } else if (chemNext <= thresholds.NEGATIVE_MAX) {
+          messages.push(`✗ Negative chemistry with ${nextPlayer}`);
+        }
+      }
+      
+      if (messages.length === 0) {
+        messages.push('✗ No chemistry with neighbors');
+      }
+      
+      tooltip.innerHTML = messages.join('<br>');
+      tooltip.style.display = 'block';
+      
+      const rect = e.target.getBoundingClientRect();
+      // FIXED: Tooltip appears on LEFT side now
+      tooltip.style.left = (rect.left - 10) + 'px';
+      tooltip.style.top = (rect.top + rect.height / 2) + 'px';
+      tooltip.style.transform = 'translate(-100%, -50%)';
+    }
+
+    function handleBattingOrderClick(orderNumber) {
+      const player = battingOrder[orderNumber - 1];
+      
+      if (player) {
+        const position = getPositionForPlayer(player);
+        if (position) {
+          openPlayerModal(position);
+        }
+      } else {
+        const positions = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+        const emptyPos = positions.find(pos => !lineup[pos]);
+        
+        if (emptyPos) {
+          openPlayerModal(emptyPos);
+        }
+      }
+    }
+
+    function getPositionForPlayer(playerName) {
+      for (let pos in lineup) {
+        if (lineup[pos] === playerName) {
+          return pos;
+        }
+      }
+      return null;
+    }
+
+    function openPlayerModal(position) {
+      currentPosition = position;
+      selectedPlayer = lineup[position] || null;
+      
+      const modal = document.getElementById('playerModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const removeBtn = document.getElementById('removeBtn');
+      
+      const labels = {
+        'P': 'Pitcher', 'C': 'Catcher', '1B': 'First Base',
+        '2B': 'Second Base', '3B': 'Third Base', 'SS': 'Shortstop',
+        'LF': 'Left Field', 'CF': 'Center Field', 'RF': 'Right Field'
+      };
+      
+      modalTitle.textContent = `Select ${labels[position]}`;
+      removeBtn.style.display = selectedPlayer ? 'block' : 'none';
+      
+      renderPlayerList();
+      modal.classList.add('show');
+      
+      document.getElementById('playerSearch').value = '';
+      document.getElementById('playerSearch').focus();
+    }
+
+    function renderPlayerList(searchTerm = '') {
+      const playerList = document.getElementById('playerList');
+      playerList.innerHTML = '';
+      
+      const filtered = allPlayers.filter(player => 
+        player.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      filtered.forEach(player => {
+        const option = document.createElement('div');
+        option.className = 'player-option';
+        option.textContent = player;
+        
+        if (player === selectedPlayer) {
+          option.classList.add('selected');
+        }
+        
+        option.addEventListener('click', function() {
+          document.querySelectorAll('.player-option').forEach(opt => 
+            opt.classList.remove('selected')
+          );
+          this.classList.add('selected');
+          selectedPlayer = player;
+        });
+        
+        playerList.appendChild(option);
+      });
+      
+      if (filtered.length === 0) {
+        playerList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No players found</div>';
+      }
+    }
+
+    function confirmSelection() {
+      if (!selectedPlayer) {
+        alert('Please select a player');
+        return;
+      }
+      
+      // Check if player is already in lineup
+      const existingPos = getPositionForPlayer(selectedPlayer);
+      if (existingPos && existingPos !== currentPosition) {
+        if (!confirm(`${selectedPlayer} is already at ${existingPos}. Swap positions?`)) {
+          return;
+        }
+        // Swap
+        const currentPlayer = lineup[currentPosition];
+        lineup[existingPos] = currentPlayer;
+        updatePosition(existingPos, currentPlayer);
+      }
+      
+      lineup[currentPosition] = selectedPlayer;
+      updatePosition(currentPosition, selectedPlayer);
+      updateBattingOrder();
+      updateChemistryDisplay();
+      updateSuggestions();
+      
+      closeModal();
+    }
+
+    function removePlayer() {
+      if (currentPosition) {
+        lineup[currentPosition] = null;
+        updatePosition(currentPosition, null);
+        updateBattingOrder();
+        updateChemistryDisplay();
+        updateSuggestions();
+      }
+      closeModal();
+    }
+
+    function closeModal() {
+      document.getElementById('playerModal').classList.remove('show');
+      currentPosition = null;
+      selectedPlayer = null;
+    }
+
+    function updatePosition(position, playerName) {
+      const posElement = document.querySelector(`[data-position="${position}"]`);
+      const nameElement = posElement.querySelector('.position-name');
+      
+      if (playerName) {
+        nameElement.textContent = playerName;
+        posElement.classList.add('filled');
+        posElement.draggable = true;
+        updatePositionGlow(position, playerName);
+      } else {
+        const labels = {
+          'P': 'Pitcher', 'C': 'Catcher', '1B': 'First Base',
+          '2B': 'Second Base', '3B': 'Third Base', 'SS': 'Shortstop',
+          'LF': 'Left Field', 'CF': 'Center Field', 'RF': 'Right Field'
+        };
+        nameElement.textContent = labels[position];
+        posElement.classList.remove('filled', 'glow-positive', 'glow-negative', 'glow-mixed');
+        posElement.draggable = false;
+      }
+    }
+
+    function updatePositionGlow(position, playerName) {
+      const posElement = document.querySelector(`[data-position="${position}"]`);
+      posElement.classList.remove('glow-positive', 'glow-negative', 'glow-mixed');
+      
+      if (!chemistryData) return;
+      
+      let positiveCount = 0;
+      let negativeCount = 0;
+      const thresholds = chemistryData.thresholds;
+      
+      Object.keys(lineup).forEach(pos => {
+        if (pos !== position && lineup[pos]) {
+          const chem = getChemistry(playerName, lineup[pos]);
+          if (chem >= thresholds.POSITIVE_MIN) {
+            positiveCount++;
+          } else if (chem <= thresholds.NEGATIVE_MAX) {
+            negativeCount++;
+          }
+        }
+      });
+      
+      if (positiveCount > 0 && negativeCount === 0) {
+        posElement.classList.add('glow-positive');
+      } else if (negativeCount > 0 && positiveCount === 0) {
+        posElement.classList.add('glow-negative');
+      } else if (positiveCount > 0 && negativeCount > 0) {
+        posElement.classList.add('glow-mixed');
+      }
+    }
+
+    function updateBattingOrder() {
+      // Rebuild batting order from current lineup
+      const newOrder = [];
+      
+      // Keep existing players in their batting order
+      battingOrder.forEach(player => {
+        if (Object.values(lineup).includes(player)) {
+          newOrder.push(player);
+        }
+      });
+      
+      // Add new players to end
+      Object.values(lineup).forEach(player => {
+        if (player && !newOrder.includes(player)) {
+          newOrder.push(player);
+        }
+      });
+      
+      battingOrder = newOrder;
+      updateBattingOrderDisplay();
+    }
+    function updateBattingOrderDisplay() {
+      const items = document.querySelectorAll('.batting-order-item');
+      const thresholds = chemistryData ? chemistryData.thresholds : { POSITIVE_MIN: 5, NEGATIVE_MAX: -5 };
+      
+      items.forEach((item, index) => {
+        const player = battingOrder[index];
+        
+        // Reset classes
+        item.className = 'batting-order-item';
+        
+        if (player) {
+          item.classList.add('filled');
+          item.draggable = true;
+          
+          const position = getPositionForPlayer(player);
+          
+          item.innerHTML = `
+            <div class="batting-number">${index + 1}</div>
+            <div class="batting-player-info">
+              <div class="batting-player-name">${player}</div>
+              ${position ? `<div class="position-badge">${position}</div>` : ''}
+            </div>
+          `;
+          
+          // Chemistry with next batter
+          const nextIndex = index === 8 ? 0 : index + 1;
+          const nextPlayer = battingOrder[nextIndex];
+          
+          if (nextPlayer) {
+            const chemNext = getChemistry(player, nextPlayer);
+            if (chemNext >= thresholds.POSITIVE_MIN) {
+              item.classList.add('chem-next-positive');
+            } else if (chemNext <= thresholds.NEGATIVE_MAX) {
+              item.classList.add('chem-next-negative');
+            }
+          }
+          
+          // Chemistry with previous batter (only for first batter, showing loop)
+          if (index === 0) {
+            const prevPlayer = battingOrder[8];
+            if (prevPlayer) {
+              const chemPrev = getChemistry(player, prevPlayer);
+              if (chemPrev >= thresholds.POSITIVE_MIN) {
+                item.classList.add('chem-prev-positive');
+              } else if (chemPrev <= thresholds.NEGATIVE_MAX) {
+                item.classList.add('chem-prev-negative');
+              }
+            }
+          }
+          
+          // Overall chemistry glow
+          updateBattingOrderGlow(item, player, index);
+          
+        } else {
+          item.classList.add('empty');
+          item.draggable = false;
+          item.innerHTML = `
+            <div class="batting-number">${index + 1}</div>
+            <div class="batting-player-info">
+              <div class="batting-player-name">Empty</div>
+            </div>
+          `;
+        }
+      });
+    }
+
+    function updateBattingOrderGlow(item, player, index) {
+      if (!chemistryData) return;
+      
+      let positiveCount = 0;
+      let negativeCount = 0;
+      const thresholds = chemistryData.thresholds;
+      
+      Object.values(lineup).forEach(other => {
+        if (other && other !== player) {
+          const chem = getChemistry(player, other);
+          if (chem >= thresholds.POSITIVE_MIN) {
+            positiveCount++;
+          } else if (chem <= thresholds.NEGATIVE_MAX) {
+            negativeCount++;
+          }
+        }
+      });
+      
+      if (positiveCount > 0 && negativeCount === 0) {
+        item.classList.add('glow-positive');
+      } else if (negativeCount > 0 && positiveCount === 0) {
+        item.classList.add('glow-negative');
+      } else if (positiveCount > 0 && negativeCount > 0) {
+        item.classList.add('glow-mixed');
+      }
+    }
+
+    function updateChemistryDisplay() {
+      if (!chemistryData) return;
+      
+      const playerNames = Object.values(lineup).filter(p => p);
+      
+      if (playerNames.length === 0) {
+        clearChemistryDisplay();
+        return;
+      }
+      
+      // FIXED: Calculate chemistry on frontend (much faster!)
+      const pairs = [];
+      let positiveCount = 0;
+      let negativeCount = 0;
+      let totalChemistry = 0;
+      const thresholds = chemistryData.thresholds;
+      
+      for (let i = 0; i < playerNames.length; i++) {
+        for (let j = i + 1; j < playerNames.length; j++) {
+          const player1 = playerNames[i];
+          const player2 = playerNames[j];
+          const chem = getChemistry(player1, player2);
+          
+          let type = 'neutral';
+          if (chem >= thresholds.POSITIVE_MIN) {
+            type = 'positive';
+            positiveCount++;
+            totalChemistry += chem;
+          } else if (chem <= thresholds.NEGATIVE_MAX) {
+            type = 'negative';
+            negativeCount++;
+            totalChemistry += chem;
+          }
+          
+          pairs.push({
+            player1: player1,
+            player2: player2,
+            value: chem,
+            type: type
+          });
+        }
+      }
+      
+      // FIXED: Update UI with rounded values (divided by 100)
+      document.getElementById('positiveCount').textContent = positiveCount;
+      document.getElementById('negativeCount').textContent = negativeCount;
+      document.getElementById('totalChemistry').textContent = Math.round(totalChemistry / 100);
+      
+      // Update position glows
+      Object.keys(lineup).forEach(pos => {
+        if (lineup[pos]) {
+          updatePositionGlow(pos, lineup[pos]);
+        }
+      });
+      
+      // Draw lines if needed
+      if (showAllChemistry) {
+        drawChemistryLines(pairs);
+      }
+    }
+
+    function clearChemistryDisplay() {
+      document.getElementById('positiveCount').textContent = '0';
+      document.getElementById('negativeCount').textContent = '0';
+      document.getElementById('totalChemistry').textContent = '0';
+      clearChemistryLines();
+    }
+
+    function clearChemistryLines() {
+      const svg = document.getElementById('chemistryLines');
+      svg.innerHTML = '';
+    }
+
+    function getChemistry(player1, player2) {
+      if (!chemistryData || !player1 || !player2) return 0;
+      
+      if (chemistryData.matrix[player1] && chemistryData.matrix[player1][player2] !== undefined) {
+        return chemistryData.matrix[player1][player2];
+      }
+      return 0;
+    }
+
+    function findPositionByPlayer(playerName) {
+      for (let pos in lineup) {
+        if (lineup[pos] === playerName) {
+          return document.querySelector(`[data-position="${pos}"]`);
+        }
+      }
+      return null;
+    }
+    
+    // Manhattan routing for chemistry lines
+    function drawChemistryLines(pairs) {
+      const svg = document.getElementById('chemistryLines');
+      svg.innerHTML = '';
+      
+      pairs.forEach(pair => {
+        if (pair.type === 'neutral') return;
+        
+        const pos1 = findPositionByPlayer(pair.player1);
+        const pos2 = findPositionByPlayer(pair.player2);
+        
+        if (!pos1 || !pos2) return;
+        
+        const rect1 = pos1.getBoundingClientRect();
+        const rect2 = pos2.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
+        
+        const x1 = rect1.left + rect1.width / 2 - svgRect.left;
+        const y1 = rect1.top + rect1.height / 2 - svgRect.top;
+        const x2 = rect2.left + rect2.width / 2 - svgRect.left;
+        const y2 = rect2.top + rect2.height / 2 - svgRect.top;
+        
+        // Get all obstacles
+        const obstacles = [];
+        document.querySelectorAll('.position.filled').forEach(p => {
+          if (p === pos1 || p === pos2) return;
+          const r = p.getBoundingClientRect();
+          obstacles.push({
+            x: r.left + r.width / 2 - svgRect.left,
+            y: r.top + r.height / 2 - svgRect.top,
+            radius: 55
+          });
+        });
+        
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        
+        let pathData;
+        
+        // Check if direct path intersects obstacles
+        let hasObstacle = false;
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        
+        obstacles.forEach(obs => {
+          const distToMid = Math.sqrt(Math.pow(midX - obs.x, 2) + Math.pow(midY - obs.y, 2));
+          if (distToMid < obs.radius) {
+            hasObstacle = true;
+          }
+        });
+        
+        if (hasObstacle) {
+          // Route around obstacles using field edges
+          const fieldMargin = 30;
+          
+          if (Math.abs(dx) > Math.abs(dy)) {
+            // Horizontal dominates - route via top or bottom
+            const routeY = y1 < svgRect.height / 2 ? fieldMargin : svgRect.height - fieldMargin;
+            pathData = `M ${x1} ${y1} L ${x1} ${routeY} L ${x2} ${routeY} L ${x2} ${y2}`;
+          } else {
+            // Vertical dominates - route via left or right
+            const routeX = x1 < svgRect.width / 2 ? fieldMargin : svgRect.width - fieldMargin;
+            pathData = `M ${x1} ${y1} L ${routeX} ${y1} L ${routeX} ${y2} L ${x2} ${y2}`;
+          }
+        } else {
+          // Simple two-segment path
+          if (Math.abs(dx) > Math.abs(dy)) {
+            pathData = `M ${x1} ${y1} L ${x2} ${y1} L ${x2} ${y2}`;
+          } else {
+            pathData = `M ${x1} ${y1} L ${x1} ${y2} L ${x2} ${y2}`;
+          }
+        }
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        path.classList.add('chemistry-line', pair.type, 'visible');
+        
+        if (Math.abs(pair.value) >= 150) {
+          path.classList.add('strong');
+        }
+        
+        svg.appendChild(path);
+      });
+    }
+
+    function toggleAllChemistry() {
+      showAllChemistry = !showAllChemistry;
+      const btn = document.querySelector('.toggle-chemistry-btn');
+      
+      if (showAllChemistry) {
+        btn.classList.add('active');
+        btn.textContent = 'Hide Chemistry';
+        updateChemistryDisplay();
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = 'Show All Chemistry';
+        clearChemistryLines();
+      }
+    }
+
+    function drawChemistryLinesForPlayer(playerName) {
+      if (!chemistryData) return;
+      
+      clearChemistryLines();
+      
+      const pairs = [];
+      const thresholds = chemistryData.thresholds;
+      
+      Object.keys(lineup).forEach(pos => {
+        const otherPlayer = lineup[pos];
+        if (otherPlayer === playerName) return;
+        if (!otherPlayer) return;
+        
+        const chem = getChemistry(playerName, otherPlayer);
+        let type = 'neutral';
+        
+        if (chem >= thresholds.POSITIVE_MIN) {
+          type = 'positive';
+        } else if (chem <= thresholds.NEGATIVE_MAX) {
+          type = 'negative';
+        }
+        
+        if (type !== 'neutral') {
+          pairs.push({
+            player1: playerName,
+            player2: otherPlayer,
+            value: chem,
+            type: type
+          });
+        }
+      });
+      
+      drawChemistryLines(pairs);
+    }
+
+    function updateSuggestions() {
+      const playerNames = Object.values(lineup).filter(p => p);
+      
+      if (playerNames.length === 0 || playerNames.length >= 9) {
+        document.getElementById('suggestionsSection').style.display = 'none';
+        return;
+      }
+      
+      if (!chemistryData) return;
+      
+      // Calculate chemistry score for each available player
+      const scores = [];
+      
+      allPlayers.forEach(player => {
+        if (playerNames.includes(player)) return;
+        
+        let totalChem = 0;
+        playerNames.forEach(teammate => {
+          totalChem += getChemistry(player, teammate);
+        });
+        
+        // FIXED: Round and divide by 100
+        scores.push({
+          player: player,
+          chemistry: Math.round(totalChem / 100)
+        });
+      });
+      
+      // Sort by chemistry (highest first)
+      scores.sort((a, b) => b.chemistry - a.chemistry);
+      
+      // Show top 5
+      const top5 = scores.slice(0, 5);
+      
+      if (top5.length > 0) {
+        const suggestionsList = document.getElementById('suggestionsList');
+        suggestionsList.innerHTML = '';
+        
+        top5.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.innerHTML = `
+            <div class="suggestion-player-name">${item.player}</div>
+            <div class="suggestion-chemistry ${item.chemistry >= 0 ? 'positive' : 'negative'}">
+              ${item.chemistry >= 0 ? '+' : ''}${item.chemistry}
+            </div>
+          `;
+          
+          div.addEventListener('click', function() {
+            const positions = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+            const emptyPos = positions.find(pos => !lineup[pos]);
+            
+            if (emptyPos) {
+              lineup[emptyPos] = item.player;
+              updatePosition(emptyPos, item.player);
+              updateBattingOrder();
+              updateChemistryDisplay();
+              updateSuggestions();
+            }
+          });
+          
+          suggestionsList.appendChild(div);
+        });
+        
+        document.getElementById('suggestionsSection').style.display = 'block';
+      }
+    }
+
+    // ========== SAVE/LOAD/EXPORT FUNCTIONS ==========
+
+    function saveCurrentLineup() {
+      const lineupName = document.getElementById('lineupNameInput').value.trim();
+      
+      if (!lineupName) {
+        alert('Please enter a lineup name');
+        return;
+      }
+      
+      if (Object.keys(lineup).filter(pos => lineup[pos]).length === 0) {
+        alert('Cannot save empty lineup');
+        return;
+      }
+      
+      const lineupData = {
+        name: lineupName,
+        lineup: lineup,
+        battingOrder: battingOrder,
+        timestamp: new Date().toISOString(),
+        chemistryScore: document.getElementById('totalChemistry').textContent
+      };
+      
+      google.script.run
+        .withSuccessHandler(function() {
+          alert('Lineup saved successfully!');
+          document.getElementById('lineupNameInput').value = '';
+          loadSavedLineupsList();
+        })
+        .withFailureHandler(function(error) {
+          alert('Error saving lineup: ' + error.message);
+        })
+        .saveLineup(lineupData);
+    }
+
+    function loadSavedLineupsList() {
+      google.script.run
+        .withSuccessHandler(function(lineups) {
+          const select = document.getElementById('savedLineupsSelect');
+          select.innerHTML = '<option value="">-- Load saved lineup --</option>';
+          
+          if (lineups && lineups.length > 0) {
+            lineups.forEach(function(lineup) {
+              const option = document.createElement('option');
+              option.value = lineup.name;
+              option.textContent = `${lineup.name} (Chemistry: ${lineup.chemistryScore})`;
+              select.appendChild(option);
+            });
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Error loading lineups:', error);
+        })
+        .getSavedLineups();
+    }
+
+    function loadSelectedLineup() {
+      const select = document.getElementById('savedLineupsSelect');
+      const lineupName = select.value;
+      
+      if (!lineupName) {
+        alert('Please select a lineup to load');
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(lineupData) {
+          if (lineupData) {
+            // Clear current lineup
+            lineup = {};
+            battingOrder = [];
+            
+            // Load saved data
+            lineup = lineupData.lineup || {};
+            battingOrder = lineupData.battingOrder || [];
+            
+            // Update UI
+            const positions = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+            positions.forEach(pos => {
+              updatePosition(pos, lineup[pos] || null);
+            });
+            
+            updateBattingOrderDisplay();
+            updateChemistryDisplay();
+            updateSuggestions();
+            
+            alert('Lineup loaded successfully!');
+          } else {
+            alert('Lineup not found');
+          }
+        })
+        .withFailureHandler(function(error) {
+          alert('Error loading lineup: ' + error.message);
+        })
+        .loadLineup(lineupName);
+    }
+
+    function deleteSelectedLineup() {
+      const select = document.getElementById('savedLineupsSelect');
+      const lineupName = select.value;
+      
+      if (!lineupName) {
+        alert('Please select a lineup to delete');
+        return;
+      }
+      
+      if (!confirm(`Delete lineup "${lineupName}"?`)) {
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function() {
+          alert('Lineup deleted successfully!');
+          loadSavedLineupsList();
+        })
+        .withFailureHandler(function(error) {
+          alert('Error deleting lineup: ' + error.message);
+        })
+        .deleteLineup(lineupName);
+    }
+
+    function exportAsText() {
+      if (Object.keys(lineup).filter(pos => lineup[pos]).length === 0) {
+        alert('Cannot export empty lineup');
+        return;
+      }
+      
+      let text = '⚾ LINEUP EXPORT\n';
+      text += '═══════════════════════════════\n\n';
+      
+      text += '📍 FIELD POSITIONS:\n';
+      const positions = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+      positions.forEach(pos => {
+        const player = lineup[pos] || 'Empty';
+        text += `  ${pos}: ${player}\n`;
+      });
+      
+      text += '\n🏏 BATTING ORDER:\n';
+      battingOrder.forEach((player, index) => {
+        const pos = getPositionForPlayer(player);
+        text += `  ${index + 1}. ${player} (${pos})\n`;
+      });
+      
+      text += '\n⚗️ TEAM CHEMISTRY:\n';
+      text += `  Total: ${document.getElementById('totalChemistry').textContent}\n`;
+      text += `  Positive Connections: ${document.getElementById('positiveCount').textContent}\n`;
+      text += `  Negative Connections: ${document.getElementById('negativeCount').textContent}\n`;
+      
+      text += '\n═══════════════════════════════\n';
+      text += `Generated: ${new Date().toLocaleString()}\n`;
+      
+      document.getElementById('exportText').textContent = text;
+      document.getElementById('exportModal').classList.add('show');
+    }
+
+    function closeExportModal() {
+      document.getElementById('exportModal').classList.remove('show');
+    }
+
+    function copyExportText() {
+      const text = document.getElementById('exportText').textContent;
+      
+      navigator.clipboard.writeText(text).then(function() {
+        alert('Copied to clipboard!');
+      }).catch(function(error) {
+        alert('Failed to copy: ' + error.message);
+      });
+    }
+
+    function clearLineup() {
+      if (Object.keys(lineup).some(pos => lineup[pos])) {
+        if (confirm('Clear all players from the lineup?')) {
+          lineup = {};
+          battingOrder = [];
+          const positions = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+          positions.forEach(pos => updatePosition(pos, null));
+          initializeBattingOrder();
+          clearChemistryDisplay();
+          document.getElementById('suggestionsSection').style.display = 'none';
+        }
+      }
+    }
+
+    function showError(error) {
+      alert('Error: ' + error.message);
+    }
+
+    // Search functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('playerSearch');
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          renderPlayerList(this.value);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

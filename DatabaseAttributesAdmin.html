@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f5f5f5;
+      margin: 0;
+    }
+    
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h2 {
+      color: #1a73e8;
+      margin-top: 0;
+      text-align: center;
+    }
+    
+    .admin-badge {
+      background: #ea4335;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    
+    .player-selector {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    
+    .player-selector label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #333;
+    }
+    
+    .player-selector select {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    
+    .button-group {
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    button {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    
+    button:hover {
+      background-color: #1557b0;
+    }
+    
+    button.secondary {
+      background-color: #5f6368;
+    }
+    
+    button.secondary:hover {
+      background-color: #484a4d;
+    }
+    
+    .results {
+      margin-top: 30px;
+    }
+    
+    .stat-section {
+      margin: 25px 0;
+      border-top: 3px solid #1a73e8;
+      padding-top: 15px;
+    }
+    
+    .stat-section h3 {
+      color: #1a73e8;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+    
+    th, td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    font-size: 13px;
+    width: auto;
+    min-width: 80px;  /* Ensures minimum width for data columns */
+    max-width: 120px; /* Prevents columns from getting too wide */
+    }
+
+    .stat-label {
+    font-weight: bold;
+    width: 180px;      /* Fixed width for label column */
+    min-width: 180px;
+    max-width: 180px;
+    text-align: left;
+    padding-left: 15px;
+   }
+    
+    th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+      color: #333;
+      position: sticky;
+      top: 0;
+    }
+    
+    tr:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .stat-label {
+      font-weight: bold;
+      min-width: 180px;
+      text-align: left;
+      padding-left: 15px;
+    }
+    
+    .loading {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+    
+    .error {
+      color: #d93025;
+      padding: 10px;
+      background: #fce8e6;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    
+    .player-header {
+      text-align: center;
+      font-weight: bold;
+      background: #e8f0fe;
+      padding: 12px;
+      font-size: 13px;
+    }
+    
+    .player-info {
+      font-size: 11px;
+      color: #5f6368;
+      display: block;
+      margin-top: 3px;
+    }
+    
+    .subsection {
+      background: #f8f9fa;
+      padding: 5px 15px;
+      font-weight: bold;
+      font-size: 12px;
+      color: #5f6368;
+      text-align: left;
+    }
+    
+    .overall-row {
+      background-color: #fff3cd;
+      font-weight: bold;
+    }
+    
+    .best-value {
+      background-color: #d4edda;
+      font-weight: bold;
+    }
+    
+    .category-overall {
+      background-color: #e8f0fe;
+      font-weight: bold;
+      border-top: 2px solid #1a73e8;
+    }
+    
+    .average-row {
+      background-color: #fff3e0;
+      font-weight: bold;
+      font-style: italic;
+      border-top: 2px solid #ff9800;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>⚾ Player Attribute Comparison Tool <span class="admin-badge">ADMIN</span></h2>
+    
+    <div class="player-selector">
+      <label for="player1">Player 1:</label>
+      <select id="player1">
+        <option value="">-- Select Player --</option>
+      </select>
+      
+      <label for="player2">Player 2:</label>
+      <select id="player2">
+        <option value="">-- Select Player --</option>
+      </select>
+      
+      <label for="player3">Player 3 (Optional):</label>
+      <select id="player3">
+        <option value="">-- Select Player --</option>
+      </select>
+      
+      <label for="player4">Player 4 (Optional):</label>
+      <select id="player4">
+        <option value="">-- Select Player --</option>
+      </select>
+      
+      <label for="player5">Player 5 (Optional):</label>
+      <select id="player5">
+        <option value="">-- Select Player --</option>
+      </select>
+    </div>
+    
+    <div class="button-group">
+      <button onclick="comparePlayers()">📊 Compare Players</button>
+      <button class="secondary" onclick="clearSelection()">🔄 Clear</button>
+    </div>
+    
+    <div id="results" class="results"></div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      google.script.run
+        .withSuccessHandler(populatePlayerDropdowns)
+        .withFailureHandler(showError)
+        .getPlayerAttributeList();
+    };
+    
+    function populatePlayerDropdowns(players) {
+      var selects = ['player1', 'player2', 'player3', 'player4', 'player5'];
+      
+      selects.forEach(function(selectId) {
+        var select = document.getElementById(selectId);
+        
+        players.forEach(function(player) {
+          var option = document.createElement('option');
+          option.value = player;
+          option.textContent = player;
+          select.appendChild(option);
+        });
+      });
+    }
+    
+    function comparePlayers() {
+      var player1 = document.getElementById('player1').value;
+      var player2 = document.getElementById('player2').value;
+      var player3 = document.getElementById('player3').value;
+      var player4 = document.getElementById('player4').value;
+      var player5 = document.getElementById('player5').value;
+      
+      if (!player1 || !player2) {
+        showError('Please select at least 2 players to compare.');
+        return;
+      }
+      
+      var playerNames = [player1, player2];
+      if (player3) playerNames.push(player3);
+      if (player4) playerNames.push(player4);
+      if (player5) playerNames.push(player5);
+      
+      document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and calculating averages...</div>';
+      
+      google.script.run
+        .withSuccessHandler(displayResults)
+        .withFailureHandler(showError)
+        .getPlayerAttributesWithAverages(playerNames);
+    }
+    
+    function displayResults(stats) {
+      if (!stats || stats.length === 0) {
+        showError('No data found for selected players.');
+        return;
+      }
+      
+      var html = '';
+      
+      // Basic Info Section
+      html += '<div class="stat-section">';
+      html += '<h3>📋 Basic Information</h3>';
+      html += '<table><thead><tr><th class="stat-label">Attribute</th>';
+      
+      stats.forEach(function(player) {
+        html += '<th class="player-header">' + player.name + '</th>';
+      });
+      
+      html += '</tr></thead><tbody>';
+      
+      var basicInfo = [
+        {label: 'Character Class', key: 'characterClass'},
+        {label: 'Throwing Side', key: 'armSide'},
+        {label: 'Batting Side', key: 'battingSide'},
+        {label: 'Weight', key: 'weight'},
+        {label: 'Ability', key: 'ability'}
+      ];
+      
+      basicInfo.forEach(function(info) {
+        html += '<tr><td class="stat-label">' + info.label + '</td>';
+        stats.forEach(function(player) {
+          var value = player[info.key];
+          html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        });
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table></div>';
+      
+      // Overall Stats Section
+      html += '<div class="stat-section">';
+      html += '<h3>⭐ Overall Ratings</h3>';
+      html += '<table><thead><tr><th class="stat-label">Attribute</th>';
+      
+      stats.forEach(function(player) {
+        html += '<th class="player-header">' + player.name + '</th>';
+      });
+      html += '</tr></thead><tbody>';
+      
+      var overallStats = [
+        {label: 'Pitching Overall', key: 'pitchingOverall'},
+        {label: 'Batting Overall', key: 'battingOverall'},
+        {label: 'Fielding Overall', key: 'fieldingOverall'},
+        {label: 'Speed Overall', key: 'speedOverall'}
+      ];
+      
+      overallStats.forEach(function(stat) {
+        html += '<tr class="overall-row"><td class="stat-label">' + stat.label + '</td>';
+        var values = stats.map(function(p) { return p[stat.key]; });
+        var maxValue = Math.max.apply(null, values);
+        
+        stats.forEach(function(player) {
+          var value = player[stat.key];
+          var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        });
+        html += '</tr>';
+      });
+      
+      html += '<tr class="average-row"><td class="stat-label">Overall Average</td>';
+      stats.forEach(function(player) {
+        var avg = (player.pitchingOverall + player.battingOverall + player.fieldingOverall + player.speedOverall) / 4;
+        html += '<td>' + avg.toFixed(2) + '</td>';
+      });
+      html += '</tr>';
+
+      html += '</tbody></table></div>';
+      
+      // Pitching Attributes
+      html += '<div class="stat-section">';
+      html += '<h3>⚾ Pitching Attributes</h3>';
+      html += '<table><thead><tr><th class="stat-label">Attribute</th>';
+      
+      stats.forEach(function(player) {
+        html += '<th class="player-header">' + player.name + '</th>';
+      });
+      
+      html += '</tr></thead><tbody>';
+      
+      // Add Pitching Overall at the top
+      html += '<tr class="category-overall"><td class="stat-label">Pitching Overall</td>';
+      var pitchingValues = stats.map(function(p) { return p.pitchingOverall; });
+      var maxPitchingValue = Math.max.apply(null, pitchingValues);
+      
+      stats.forEach(function(player) {
+        var value = player.pitchingOverall;
+        var cellClass = (value === maxPitchingValue && maxPitchingValue > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      var pitchingStats = [
+        {label: 'Curveball Speed', key: 'curveballSpeed'},
+        {label: 'Fastball Speed', key: 'fastballSpeed'},
+        {label: 'Curve', key: 'curve'},
+        {label: 'Stamina', key: 'stamina'}
+      ];
+      
+      pitchingStats.forEach(function(stat) {
+        html += '<tr><td class="stat-label">' + stat.label + '</td>';
+        var values = stats.map(function(p) { return p[stat.key]; });
+        var maxValue = Math.max.apply(null, values);
+        
+        stats.forEach(function(player) {
+          var value = player[stat.key];
+          var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        });
+        html += '</tr>';
+      });
+      
+      // Add Pitching Average row
+      html += '<tr class="average-row"><td class="stat-label">Pitching Average</td>';
+      stats.forEach(function(player) {
+        var avg = player.pitchingAverage;
+        html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      html += '</tbody></table></div>';
+      
+      // Batting/Hitting Attributes
+      html += '<div class="stat-section">';
+      html += '<h3>🏏 Batting Attributes</h3>';
+      html += '<table><thead><tr><th class="stat-label">Attribute</th>';
+      
+      stats.forEach(function(player) {
+        html += '<th class="player-header">' + player.name + '</th>';
+      });
+      
+      html += '</tr></thead><tbody>';
+      
+      // Add Batting Overall at the top
+      html += '<tr class="category-overall"><td class="stat-label">Batting Overall</td>';
+      var battingValues = stats.map(function(p) { return p.battingOverall; });
+      var maxBattingValue = Math.max.apply(null, battingValues);
+      
+      stats.forEach(function(player) {
+        var value = player.battingOverall;
+        var cellClass = (value === maxBattingValue && maxBattingValue > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      var hittingStats = [
+        {label: 'Hitting Trajectory', key: 'hittingTrajectory'},
+        {label: 'Slap Hit Contact Size', key: 'slapHitContact'},
+        {label: 'Charge Hit Contact Size', key: 'chargeHitContact'},
+        {label: 'Slap Hit Power', key: 'slapHitPower'},
+        {label: 'Charge Hit Power', key: 'chargeHitPower'}
+      ];
+      
+      hittingStats.forEach(function(stat) {
+        html += '<tr><td class="stat-label">' + stat.label + '</td>';
+        
+        if (stat.key === 'hittingTrajectory') {
+          // Trajectory is text, no highlighting
+          stats.forEach(function(player) {
+            var value = player[stat.key];
+            html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          });
+        } else {
+          // Numeric values, highlight best
+          var values = stats.map(function(p) { return p[stat.key]; });
+          var maxValue = Math.max.apply(null, values);
+          
+          stats.forEach(function(player) {
+            var value = player[stat.key];
+            var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+            html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          });
+        }
+        html += '</tr>';
+      });
+      
+      // Add Batting Average row
+      html += '<tr class="average-row"><td class="stat-label">Batting Average</td>';
+      stats.forEach(function(player) {
+        var avg = player.battingAverage;
+        html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      html += '</tbody></table></div>';
+      
+      // Fielding Attributes
+      html += '<div class="stat-section">';
+      html += '<h3>🧤 Fielding Attributes</h3>';
+      html += '<table><thead><tr><th class="stat-label">Attribute</th>';
+      
+      stats.forEach(function(player) {
+        html += '<th class="player-header">' + player.name + '</th>';
+      });
+      
+      html += '</tr></thead><tbody>';
+      
+      // Add Fielding Overall at the top
+      html += '<tr class="category-overall"><td class="stat-label">Fielding Overall</td>';
+      var fieldingValues = stats.map(function(p) { return p.fieldingOverall; });
+      var maxFieldingValue = Math.max.apply(null, fieldingValues);
+      
+      stats.forEach(function(player) {
+        var value = player.fieldingOverall;
+        var cellClass = (value === maxFieldingValue && maxFieldingValue > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      var fieldingStats = [
+        {label: 'Throwing Speed', key: 'throwingSpeed'},
+        {label: 'Fielding', key: 'fielding'}
+      ];
+      
+      fieldingStats.forEach(function(stat) {
+        html += '<tr><td class="stat-label">' + stat.label + '</td>';
+        var values = stats.map(function(p) { return p[stat.key]; });
+        var maxValue = Math.max.apply(null, values);
+        
+        stats.forEach(function(player) {
+          var value = player[stat.key];
+          var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        });
+        html += '</tr>';
+      });
+      
+      // Add Fielding Average row
+      html += '<tr class="average-row"><td class="stat-label">Fielding Average</td>';
+      stats.forEach(function(player) {
+        var avg = player.fieldingAverage;
+        html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      html += '</tbody></table></div>';
+      
+      // Running Attributes
+      html += '<div class="stat-section">';
+      html += '<h3>🏃 Running Attributes</h3>';
+      html += '<table><thead><tr><th class="stat-label">Attribute</th>';
+      
+      stats.forEach(function(player) {
+        html += '<th class="player-header">' + player.name + '</th>';
+      });
+      
+      html += '</tr></thead><tbody>';
+      
+      // Add Speed Overall at the top
+      html += '<tr class="category-overall"><td class="stat-label">Speed Overall</td>';
+      var speedOverallValues = stats.map(function(p) { return p.speedOverall; });
+      var maxSpeedOverall = Math.max.apply(null, speedOverallValues);
+      
+      stats.forEach(function(player) {
+        var value = player.speedOverall;
+        var cellClass = (value === maxSpeedOverall && maxSpeedOverall > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      html += '<tr><td class="stat-label">Speed</td>';
+      var speedValues = stats.map(function(p) { return p.speed; });
+      var maxSpeed = Math.max.apply(null, speedValues);
+      
+      stats.forEach(function(player) {
+        var value = player.speed;
+        var cellClass = (value === maxSpeed && maxSpeed > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      html += '<tr><td class="stat-label">Bunting</td>';
+      var buntingValues = stats.map(function(p) { return p.bunting; });
+      var maxBunting = Math.max.apply(null, buntingValues);
+      
+      stats.forEach(function(player) {
+        var value = player.bunting;
+        var cellClass = (value === maxBunting && maxBunting > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+      });
+      html += '</tr>';
+      
+      html += '</tbody></table></div>';
+      
+      document.getElementById('results').innerHTML = html;
+    }
+    
+    function clearSelection() {
+      document.getElementById('player1').value = '';
+      document.getElementById('player2').value = '';
+      document.getElementById('player3').value = '';
+      document.getElementById('player4').value = '';
+      document.getElementById('player5').value = '';
+      document.getElementById('results').innerHTML = '';
+    }
+    
+    function showError(error) {
+      document.getElementById('results').innerHTML = 
+        '<div class="error">⚠️ Error: ' + error + '</div>';
+    }
+  </script>
+</body>
+</html>

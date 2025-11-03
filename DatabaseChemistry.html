@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .selector-section {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+    }
+
+    .selector-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .player-selectors {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .player-select {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 14px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      background: white;
+      color: #212529;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .player-select:hover {
+      border-color: #667eea;
+    }
+
+    .player-select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .player-select.selected {
+      border-color: #667eea;
+      background: #e7f1ff;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-primary:disabled {
+      background: #dee2e6;
+      cursor: not-allowed;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: white;
+      flex: 1;
+    }
+
+    .btn-success:hover {
+      background: #218838;
+    }
+
+    .btn-success:disabled {
+      background: #dee2e6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+      font-size: 15px;
+    }
+
+    .results-container {
+      display: none;
+    }
+
+    .results-container.show {
+      display: block;
+    }
+
+    /* Team Summary */
+    .team-summary {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+      border: 2px solid #dee2e6;
+      display: none;
+    }
+
+    .team-summary.show {
+      display: block;
+    }
+
+    .team-summary h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #212529;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .summary-stats {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .summary-stat {
+      flex: 1;
+      max-width: 150px;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .summary-stat.positive {
+      background: #d4edda;
+      border: 2px solid #28a745;
+    }
+
+    .summary-stat.negative {
+      background: #f8d7da;
+      border: 2px solid #dc3545;
+    }
+
+    .summary-stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .summary-stat.positive .summary-stat-label {
+      color: #155724;
+    }
+
+    .summary-stat.negative .summary-stat-label {
+      color: #721c24;
+    }
+
+    .summary-stat-value {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .summary-stat.positive .summary-stat-value {
+      color: #28a745;
+    }
+
+    .summary-stat.negative .summary-stat-value {
+      color: #dc3545;
+    }
+
+    .summary-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+    }
+
+    .summary-box {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      border: 2px solid #dee2e6;
+    }
+
+    .summary-box h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .summary-box.shared-positive h4 {
+      color: #28a745;
+    }
+
+    .summary-box.mixed h4 {
+      color: #ffc107;
+    }
+
+    .summary-box.conflicts h4 {
+      color: #dc3545;
+    }
+
+    .summary-list {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .summary-item {
+      padding: 4px 0;
+      border-bottom: 1px solid #f8f9fa;
+    }
+
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+
+    .summary-subtext {
+      font-size: 11px;
+      color: #6c757d;
+      margin-left: 8px;
+    }
+
+    /* Player Comparison Grid */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .player-column {
+      background: #f8f9fa;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid #dee2e6;
+      display: flex;
+      flex-direction: column;
+      height: 700px; /* Fixed total height */
+    }
+
+    .player-header {
+      padding: 15px;
+      font-weight: 600;
+      font-size: 16px;
+      text-align: center;
+      color: white;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .chemistry-section {
+      background: white;
+      flex: 1; /* Each section takes equal space */
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* Important for flex scrolling */
+    }
+
+    .chemistry-header {
+      padding: 12px 15px;
+      font-weight: 600;
+      font-size: 14px;
+      text-align: center;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .chemistry-header.positive {
+      background: #28a745;
+    }
+
+    .chemistry-header.negative {
+      background: #dc3545;
+    }
+
+    .chemistry-count {
+      background: rgba(255, 255, 255, 0.3);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .chemistry-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .chemistry-item {
+      padding: 10px 15px;
+      border-bottom: 1px solid #e9ecef;
+      font-size: 14px;
+      color: #212529;
+      background: white;
+      transition: background 0.2s;
+    }
+
+    .chemistry-item:hover {
+      background: #f8f9fa;
+    }
+
+    .chemistry-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Highlighting for shared chemistry */
+    .chemistry-item.highlight-shared-positive {
+      background: #d4edda;
+      font-weight: 600;
+      border-left: 4px solid #28a745;
+    }
+
+    .chemistry-item.highlight-shared-positive:hover {
+      background: #c3e6cb;
+    }
+
+    .chemistry-item.highlight-mixed {
+      background: #fff3cd;
+      font-weight: 600;
+      border-left: 4px solid #ffc107;
+    }
+
+    .chemistry-item.highlight-mixed:hover {
+      background: #ffe8a1;
+    }
+
+    .no-chemistry {
+      padding: 30px 20px;
+      text-align: center;
+      color: #6c757d;
+      font-style: italic;
+      font-size: 13px;
+    }
+
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #f5c6cb;
+      margin-top: 15px;
+      display: none;
+    }
+
+    /* Scrollbar styling */
+    .chemistry-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chemistry-list::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .chemistry-list::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+
+    .chemistry-list::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6c757d;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    .empty-state-text {
+      font-size: 16px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚡ Player Chemistry Comparison</h1>
+      <p>Compare chemistry for up to 4 players side-by-side</p>
+    </div>
+
+    <div class="content">
+      <div class="selector-section">
+        <label class="selector-label">Select Players (1-4):</label>
+        <div class="player-selectors">
+          <select id="player1" class="player-select">
+            <option value="">-- Player 1 --</option>
+          </select>
+          <select id="player2" class="player-select">
+            <option value="">-- Player 2 --</option>
+          </select>
+          <select id="player3" class="player-select">
+            <option value="">-- Player 3 --</option>
+          </select>
+          <select id="player4" class="player-select">
+            <option value="">-- Player 4 --</option>
+          </select>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-primary" id="compareBtn" onclick="comparePlayers()" disabled>Compare Chemistry</button>
+          <button class="btn btn-success" id="summaryBtn" onclick="toggleTeamSummary()" disabled>Team Summary</button>
+          <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+        </div>
+      </div>
+
+      <div id="loadingMessage" class="loading">
+        Loading players...
+      </div>
+
+      <div id="resultsContainer" class="results-container">
+        <!-- Team Summary (Option 1) -->
+        <div class="team-summary" id="teamSummary">
+          <h3>🎯 Team Analysis</h3>
+          <div class="summary-stats">
+            <div class="summary-stat positive">
+              <div class="summary-stat-label">Internal Synergy</div>
+              <div class="summary-stat-value" id="internalPositive">0</div>
+            </div>
+            <div class="summary-stat negative">
+              <div class="summary-stat-label">Internal Conflicts</div>
+              <div class="summary-stat-value" id="internalNegative">0</div>
+            </div>
+          </div>
+          <div class="summary-details" id="summaryDetails">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Player Columns -->
+        <div class="comparison-grid" id="comparisonGrid">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <div class="empty-state-icon">👥</div>
+          <div class="empty-state-text">Select players above to compare their chemistry</div>
+        </div>
+      </div>
+
+      <div id="errorMessage" class="error-message"></div>
+    </div>
+  </div>
+
+  <script>
+    let allPlayers = [];
+    let selectedPlayers = [];
+    let currentData = null;
+    let showingSummary = false;
+
+    window.onload = function() {
+      loadPlayers();
+      setupSelectors();
+    };
+
+    function loadPlayers() {
+      google.script.run
+        .withSuccessHandler(populatePlayers)
+        .withFailureHandler(showError)
+        .getPlayerList();
+    }
+
+    function populatePlayers(players) {
+      const loading = document.getElementById('loadingMessage');
+      loading.style.display = 'none';
+      
+      if (!players || players.length === 0) {
+        showError('No players found in the database.');
+        return;
+      }
+      
+      allPlayers = players;
+      
+      // Populate all dropdowns
+      for (let i = 1; i <= 4; i++) {
+        const select = document.getElementById('player' + i);
+        players.forEach(function(player) {
+          const option = document.createElement('option');
+          option.value = player;
+          option.textContent = player;
+          select.appendChild(option);
+        });
+      }
+    }
+
+    function setupSelectors() {
+      for (let i = 1; i <= 4; i++) {
+        const select = document.getElementById('player' + i);
+        select.addEventListener('change', function() {
+          updateSelectedPlayers();
+        });
+      }
+    }
+
+    function updateSelectedPlayers() {
+      selectedPlayers = [];
+      
+      for (let i = 1; i <= 4; i++) {
+        const select = document.getElementById('player' + i);
+        const value = select.value;
+        
+        if (value) {
+          // Check for duplicates
+          if (selectedPlayers.indexOf(value) !== -1) {
+            alert('Player "' + value + '" is already selected!');
+            select.value = '';
+            return;
+          }
+          selectedPlayers.push(value);
+          select.classList.add('selected');
+        } else {
+          select.classList.remove('selected');
+        }
+      }
+      
+      // Enable/disable buttons
+      const compareBtn = document.getElementById('compareBtn');
+      const summaryBtn = document.getElementById('summaryBtn');
+      
+      compareBtn.disabled = selectedPlayers.length === 0;
+      summaryBtn.disabled = selectedPlayers.length < 2;
+    }
+
+    function comparePlayers() {
+      if (selectedPlayers.length === 0) {
+        return;
+      }
+      
+      const resultsContainer = document.getElementById('resultsContainer');
+      resultsContainer.classList.remove('show');
+      
+      document.getElementById('loadingMessage').style.display = 'block';
+      document.getElementById('loadingMessage').textContent = 'Loading chemistry data...';
+      
+      google.script.run
+        .withSuccessHandler(displayComparison)
+        .withFailureHandler(showError)
+        .getMultiplePlayerChemistry(selectedPlayers);
+    }
+
+    function displayComparison(data) {
+      document.getElementById('loadingMessage').style.display = 'none';
+      
+      currentData = data;
+      
+      const resultsContainer = document.getElementById('resultsContainer');
+      const emptyState = document.getElementById('emptyState');
+      const comparisonGrid = document.getElementById('comparisonGrid');
+      
+      // Clear previous columns
+      comparisonGrid.innerHTML = '';
+      
+      if (data.players.length === 0) {
+        emptyState.style.display = 'block';
+        comparisonGrid.style.display = 'none';
+      } else {
+        emptyState.style.display = 'none';
+        comparisonGrid.style.display = 'grid';
+        
+        // Create column for each player
+        data.players.forEach(function(player) {
+          const column = createPlayerColumn(player, data.teamAnalysis);
+          comparisonGrid.appendChild(column);
+        });
+        
+        // Update team summary if we have 2+ players
+        if (data.teamAnalysis) {
+          updateTeamSummary(data.teamAnalysis);
+        }
+      }
+      
+      resultsContainer.classList.add('show');
+    }
+
+    function createPlayerColumn(player, teamAnalysis) {
+      const column = document.createElement('div');
+      column.className = 'player-column';
+      
+      // Header with player name
+      const header = document.createElement('div');
+      header.className = 'player-header';
+      header.textContent = player.name;
+      column.appendChild(header);
+      
+      // Positive chemistry section
+      const positiveSection = document.createElement('div');
+      positiveSection.className = 'chemistry-section';
+      
+      const positiveHeader = document.createElement('div');
+      positiveHeader.className = 'chemistry-header positive';
+      positiveHeader.innerHTML = `
+        <span>✓ Positive Chemistry</span>
+        <span class="chemistry-count">${player.posCount}</span>
+      `;
+      positiveSection.appendChild(positiveHeader);
+      
+      const positiveList = document.createElement('div');
+      positiveList.className = 'chemistry-list';
+      
+      if (player.positive.length === 0) {
+        positiveList.innerHTML = '<div class="no-chemistry">No positive chemistry</div>';
+      } else {
+        player.positive.forEach(function(name) {
+          const item = document.createElement('div');
+          item.className = 'chemistry-item';
+          item.textContent = name;
+          
+          // Apply highlighting (Option 2)
+          if (teamAnalysis) {
+            if (teamAnalysis.sharedPositive[name]) {
+              item.classList.add('highlight-shared-positive');
+              item.title = 'Shared positive chemistry with: ' + teamAnalysis.sharedPositive[name].join(', ');
+            } else if (teamAnalysis.mixed[name]) {
+              item.classList.add('highlight-mixed');
+              item.title = 'Mixed chemistry - positive for some, negative for others';
+            }
+          }
+          
+          positiveList.appendChild(item);
+        });
+      }
+      
+      positiveSection.appendChild(positiveList);
+      column.appendChild(positiveSection);
+      
+      // Negative chemistry section
+      const negativeSection = document.createElement('div');
+      negativeSection.className = 'chemistry-section';
+      
+      const negativeHeader = document.createElement('div');
+      negativeHeader.className = 'chemistry-header negative';
+      negativeHeader.innerHTML = `
+        <span>✗ Negative Chemistry</span>
+        <span class="chemistry-count">${player.negCount}</span>
+      `;
+      negativeSection.appendChild(negativeHeader);
+      
+      const negativeList = document.createElement('div');
+      negativeList.className = 'chemistry-list';
+      
+      if (player.negative.length === 0) {
+        negativeList.innerHTML = '<div class="no-chemistry">No negative chemistry</div>';
+      } else {
+        player.negative.forEach(function(name) {
+          const item = document.createElement('div');
+          item.className = 'chemistry-item';
+          item.textContent = name;
+          
+          // Apply highlighting for mixed chemistry
+          if (teamAnalysis && teamAnalysis.mixed[name]) {
+            item.classList.add('highlight-mixed');
+            item.title = 'Mixed chemistry - positive for some, negative for others';
+          }
+          
+          negativeList.appendChild(item);
+        });
+      }
+      
+      negativeSection.appendChild(negativeList);
+      column.appendChild(negativeSection);
+      
+      return column;
+    }
+
+    function updateTeamSummary(analysis) {
+      document.getElementById('internalPositive').textContent = analysis.internalPositive;
+      document.getElementById('internalNegative').textContent = analysis.internalNegative;
+      
+      const summaryDetails = document.getElementById('summaryDetails');
+      summaryDetails.innerHTML = '';
+      
+      // Shared Positive Chemistry
+      const sharedPositiveCount = Object.keys(analysis.sharedPositive).length;
+      if (sharedPositiveCount > 0) {
+        const box = document.createElement('div');
+        box.className = 'summary-box shared-positive';
+        box.innerHTML = '<h4>✓ Shared Positive Chemistry (' + sharedPositiveCount + ')</h4>';
+        
+        const list = document.createElement('div');
+        list.className = 'summary-list';
+        
+        Object.keys(analysis.sharedPositive).sort().forEach(function(character) {
+          const players = analysis.sharedPositive[character];
+          const item = document.createElement('div');
+          item.className = 'summary-item';
+          item.innerHTML = character + '<span class="summary-subtext">(' + players.length + ' players)</span>';
+          list.appendChild(item);
+        });
+        
+        box.appendChild(list);
+        summaryDetails.appendChild(box);
+      }
+      
+      // Mixed Chemistry
+      const mixedCount = Object.keys(analysis.mixed).length;
+      if (mixedCount > 0) {
+        const box = document.createElement('div');
+        box.className = 'summary-box mixed';
+        box.innerHTML = '<h4>⚠ Mixed Chemistry (' + mixedCount + ')</h4>';
+        const list = document.createElement('div');
+    list.className = 'summary-list';
+    
+    Object.keys(analysis.mixed).sort().forEach(function(character) {
+      const data = analysis.mixed[character];
+      const item = document.createElement('div');
+      item.className = 'summary-item';
+      item.innerHTML = character + 
+        '<span class="summary-subtext">(+' + data.positive.length + ' / -' + data.negative.length + ')</span>';
+      list.appendChild(item);
+    });
+    
+    box.appendChild(list);
+    summaryDetails.appendChild(box);
+  }
+  
+  // Internal Conflicts
+  if (analysis.internalNegative > 0) {
+    const box = document.createElement('div');
+    box.className = 'summary-box conflicts';
+    box.innerHTML = '<h4>✗ Internal Conflicts (' + analysis.internalNegative + ')</h4>';
+    
+    const list = document.createElement('div');
+    list.className = 'summary-list';
+    
+    analysis.connections.forEach(function(conn) {
+      if (conn.type === 'negative') {
+        const item = document.createElement('div');
+        item.className = 'summary-item';
+        item.textContent = conn.player1 + ' ↔ ' + conn.player2;
+        list.appendChild(item);
+      }
+    });
+    
+    box.appendChild(list);
+    summaryDetails.appendChild(box);
+  }
+}
+
+function toggleTeamSummary() {
+  if (!currentData || !currentData.teamAnalysis) {
+    return;
+  }
+  
+  showingSummary = !showingSummary;
+  const summary = document.getElementById('teamSummary');
+  const btn = document.getElementById('summaryBtn');
+  
+  if (showingSummary) {
+    summary.classList.add('show');
+    btn.textContent = 'Hide Summary';
+    btn.style.background = '#ffc107';
+  } else {
+    summary.classList.remove('show');
+    btn.textContent = 'Team Summary';
+    btn.style.background = '#28a745';
+  }
+}
+
+function clearAll() {
+  for (let i = 1; i <= 4; i++) {
+    const select = document.getElementById('player' + i);
+    select.value = '';
+    select.classList.remove('selected');
+  }
+  
+  selectedPlayers = [];
+  currentData = null;
+  showingSummary = false;
+  
+  document.getElementById('compareBtn').disabled = true;
+  document.getElementById('summaryBtn').disabled = true;
+  document.getElementById('resultsContainer').classList.remove('show');
+  document.getElementById('teamSummary').classList.remove('show');
+  document.getElementById('emptyState').style.display = 'block';
+  
+  const btn = document.getElementById('summaryBtn');
+  btn.textContent = 'Team Summary';
+  btn.style.background = '#28a745';
+}
+
+function showError(error) {
+  document.getElementById('loadingMessage').style.display = 'none';
+  const errorMessage = document.getElementById('errorMessage');
+  errorMessage.textContent = 'Error: ' + error.message;
+  errorMessage.style.display = 'block';
+  
+  setTimeout(function() {
+    errorMessage.style.display = 'none';
+  }, 5000);
+}
+</script>
+</body>
+</html>
+```
