@@ -405,40 +405,39 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     const pythonName = GAME_CHARACTER_ORDER[i];
     const characterName = getCustomCharacterName(nameMappings, pythonName);
 
-    // Get existing custom data for this character, or use empty defaults
     const customData = existingCustomData[characterName] || { mii: '', miiColor: '', preCharge: '' };
 
     const sheetRow = [
-      characterName,                                  // Column A - NAME
-      CHARACTER_CLASSES[presetRow[2]] || '',         // Column B - CHARACTER_CLASS (preset index 2)
-      presetRow[5] === 1 ? 'Yes' : 'No',            // Column C - CAPTAIN (preset index 5)
-      customData.mii,                                // Column D - MII (preserve existing)
-      customData.miiColor,                           // Column E - MII_COLOR (preserve existing)
-      ARM_SIDES[presetRow[0]] || '',                // Column F - ARM_SIDE (preset index 0)
-      ARM_SIDES[presetRow[1]] || '',                // Column G - BATTING_SIDE (preset index 1)
-      presetRow[4],                                  // Column H - WEIGHT (preset index 4)
-      combineAbilityField(presetRow[8], presetRow[9]), // Column I - ABILITY (indices 8 OR 9)
-      presetRow[18],                                 // Column J - PITCHING_OVERALL (preset index 18)
-      presetRow[19],                                 // Column K - BATTING_OVERALL (preset index 19)
-      presetRow[20],                                 // Column L - FIELDING_OVERALL (preset index 20)
-      presetRow[21],                                 // Column M - SPEED_OVERALL (preset index 21)
-      STAR_SWINGS[presetRow[7]] || '',             // Column N - STAR_SWING (preset index 7)
-      presetRow[27],                                 // Column O - HIT_CURVE (preset index 27)
-      presetRow[26],                                 // Column P - HITTING_TRAJECTORY (preset index 26)
-      presetRow[10],                                 // Column Q - SLAP_HIT_CONTACT (preset index 10)
-      presetRow[11],                                 // Column R - CHARGE_HIT_CONTACT (preset index 11)
-      presetRow[12],                                 // Column S - SLAP_HIT_POWER (preset index 12)
-      presetRow[13],                                 // Column T - CHARGE_HIT_POWER (preset index 13)
-      presetRow[15],                                 // Column U - SPEED (preset index 15)
-      presetRow[14],                                 // Column V - BUNTING (preset index 14)
-      presetRow[17],                                 // Column W - FIELDING (preset index 17)
-      presetRow[16],                                 // Column X - THROWING_SPEED (preset index 16)
-      customData.preCharge,                          // Column Y - PRE_CHARGE (preserve existing)
-      combineStarPitchField(presetRow[6], presetRow[29]), // Column Z - STAR_PITCH (indices 6 + 29)
-      presetRow[23],                                 // Column AA - FASTBALL_SPEED (preset index 23)
-      presetRow[22],                                 // Column AB - CURVEBALL_SPEED (preset index 22)
-      presetRow[24],                                 // Column AC - CURVE (preset index 24)
-      presetRow[28]                                  // Column AD - STAMINA (preset index 28)
+      characterName,
+      CHARACTER_CLASSES[presetRow[2]] || '',
+      presetRow[5] === 1 ? 'Yes' : 'No',
+      customData.mii,
+      customData.miiColor,
+      ARM_SIDES[presetRow[0]] || '',
+      ARM_SIDES[presetRow[1]] || '',
+      presetRow[4],
+      combineAbilityField(presetRow[8], presetRow[9]),
+      presetRow[18],
+      presetRow[19],
+      presetRow[20],
+      presetRow[21],
+      STAR_SWINGS[presetRow[7]] || '',
+      presetRow[27],
+      presetRow[26],
+      presetRow[10],
+      presetRow[11],
+      presetRow[12],
+      presetRow[13],
+      presetRow[15],
+      presetRow[14],
+      presetRow[17],
+      presetRow[16],
+      customData.preCharge,
+      combineStarPitchField(presetRow[6], presetRow[29]),
+      presetRow[23],
+      presetRow[22],
+      presetRow[24],
+      presetRow[28]
     ];
 
     sheetData.push(sheetRow);
@@ -749,11 +748,16 @@ function exportChemistrySection(ss, config) {
 function exportStatsSection(ss, config) {
   const attributesSheet = ss.getSheetByName(config.SHEETS.ATTRIBUTES);
 
-  if (!attributesSheet || attributesSheet.getLastRow() < 2) {
+  if (!attributesSheet || attributesSheet.getLastRow() < config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW) {
     throw new Error('Advanced Attributes sheet not found or empty');
   }
 
-  const sheetData = attributesSheet.getRange(2, 1, 101, 30).getValues();
+  const sheetData = attributesSheet.getRange(
+    config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW,
+    1,
+    101,
+    config.ATTRIBUTES_CONFIG.TOTAL_COLUMNS
+  ).getValues();
 
   const nameToIndex = {};
   GAME_CHARACTER_ORDER.forEach((name, idx) => {
@@ -762,8 +766,10 @@ function exportStatsSection(ss, config) {
 
   const presetMatrix = Array(101).fill(null).map(() => Array(30).fill(0));
 
+  const cols = config.ATTRIBUTES_CONFIG.COLUMNS;
+
   sheetData.forEach((row, idx) => {
-    const characterName = String(row[0]).trim();
+    const characterName = String(row[cols.NAME]).trim();
     const charIndex = nameToIndex[characterName];
 
     if (charIndex === undefined) {
@@ -772,43 +778,42 @@ function exportStatsSection(ss, config) {
 
     const presetRow = presetMatrix[charIndex];
 
-    presetRow[0] = ARM_SIDES.indexOf(row[5]) || 0;                    // ARM_SIDE
-    presetRow[1] = ARM_SIDES.indexOf(row[6]) || 0;                    // BATTING_SIDE
-    presetRow[2] = CHARACTER_CLASSES.indexOf(row[1]) || 0;            // CHARACTER_CLASS
-    presetRow[3] = 0;                                                  // Unused field
-    presetRow[4] = Number(row[7]) || 0;                               // WEIGHT
-    presetRow[5] = row[2] === 'Yes' ? 1 : 0;                          // CAPTAIN
+    presetRow[0] = ARM_SIDES.indexOf(row[cols.ARM_SIDE]) || 0;
+    presetRow[1] = ARM_SIDES.indexOf(row[cols.BATTING_SIDE]) || 0;
+    presetRow[2] = CHARACTER_CLASSES.indexOf(row[cols.CHARACTER_CLASS]) || 0;
+    presetRow[3] = 0;
+    presetRow[4] = Number(row[cols.WEIGHT]) || 0;
+    presetRow[5] = row[cols.CAPTAIN] === 'Yes' ? 1 : 0;
 
-    const starPitchSplit = splitStarPitchField(row[25]);
-    presetRow[6] = starPitchSplit.starPitchIndex;                     // STAR_PITCH
-    presetRow[29] = starPitchSplit.starPitchTypeIndex;                // STAR_PITCH_TYPE
+    const starPitchSplit = splitStarPitchField(row[cols.STAR_PITCH]);
+    presetRow[6] = starPitchSplit.starPitchIndex;
+    presetRow[29] = starPitchSplit.starPitchTypeIndex;
 
-    presetRow[7] = STAR_SWINGS.indexOf(row[13]) || 0;                 // STAR_SWING
+    presetRow[7] = STAR_SWINGS.indexOf(row[cols.STAR_SWING]) || 0;
 
-    const abilitySplit = splitAbilityField(row[8]);
-    presetRow[8] = abilitySplit.fieldingIndex;                        // FIELDING_ABILITY
-    presetRow[9] = abilitySplit.baserunningIndex;                     // BASERUNNING_ABILITY
+    const abilitySplit = splitAbilityField(row[cols.ABILITY]);
+    presetRow[8] = abilitySplit.fieldingIndex;
+    presetRow[9] = abilitySplit.baserunningIndex;
 
-    presetRow[10] = Number(row[16]) || 0;                             // SLAP_HIT_CONTACT
-    presetRow[11] = Number(row[17]) || 0;                             // CHARGE_HIT_CONTACT
-    presetRow[12] = Number(row[18]) || 0;                             // SLAP_HIT_POWER
-    presetRow[13] = Number(row[19]) || 0;                             // CHARGE_HIT_POWER
-    presetRow[14] = Number(row[21]) || 0;                             // BUNTING
-    presetRow[15] = Number(row[20]) || 0;                             // SPEED
-    presetRow[16] = Number(row[23]) || 0;                             // THROWING_SPEED
-    presetRow[17] = Number(row[22]) || 0;                             // FIELDING
-    presetRow[18] = Number(row[9]) || 0;                              // PITCHING_OVERALL
-    presetRow[19] = Number(row[10]) || 0;                             // BATTING_OVERALL
-    presetRow[20] = Number(row[11]) || 0;                             // FIELDING_OVERALL
-    presetRow[21] = Number(row[12]) || 0;                             // SPEED_OVERALL
-    presetRow[22] = Number(row[27]) || 0;                             // CURVEBALL_SPEED
-    presetRow[23] = Number(row[26]) || 0;                             // FASTBALL_SPEED
-    presetRow[24] = Number(row[28]) || 0;                             // CURVE
-    presetRow[25] = 0;                                                 // Unused field
-    presetRow[26] = Number(row[15]) || 0;                             // HITTING_TRAJECTORY
-    presetRow[27] = Number(row[14]) || 0;                             // HIT_CURVE
-    presetRow[28] = Number(row[29]) || 0;                             // STAMINA
-    // presetRow[29] already set above (STAR_PITCH_TYPE)
+    presetRow[10] = Number(row[cols.SLAP_HIT_CONTACT]) || 0;
+    presetRow[11] = Number(row[cols.CHARGE_HIT_CONTACT]) || 0;
+    presetRow[12] = Number(row[cols.SLAP_HIT_POWER]) || 0;
+    presetRow[13] = Number(row[cols.CHARGE_HIT_POWER]) || 0;
+    presetRow[14] = Number(row[cols.BUNTING]) || 0;
+    presetRow[15] = Number(row[cols.SPEED]) || 0;
+    presetRow[16] = Number(row[cols.THROWING_SPEED]) || 0;
+    presetRow[17] = Number(row[cols.FIELDING]) || 0;
+    presetRow[18] = Number(row[cols.PITCHING_OVERALL]) || 0;
+    presetRow[19] = Number(row[cols.BATTING_OVERALL]) || 0;
+    presetRow[20] = Number(row[cols.FIELDING_OVERALL]) || 0;
+    presetRow[21] = Number(row[cols.SPEED_OVERALL]) || 0;
+    presetRow[22] = Number(row[cols.CURVEBALL_SPEED]) || 0;
+    presetRow[23] = Number(row[cols.FASTBALL_SPEED]) || 0;
+    presetRow[24] = Number(row[cols.CURVE]) || 0;
+    presetRow[25] = 0;
+    presetRow[26] = Number(row[cols.HITTING_TRAJECTORY]) || 0;
+    presetRow[27] = Number(row[cols.HIT_CURVE]) || 0;
+    presetRow[28] = Number(row[cols.STAMINA]) || 0;
   });
 
   return presetMatrix.map(row => row.join(','));
