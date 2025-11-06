@@ -1021,13 +1021,34 @@
 
     // ===== INITIALIZATION =====
     window.onload = function() {
-      checkForUpdates();
+      // Disable field positions until data loads
+      disableFieldPositions();
+
+      // Auto-refresh handles cache updates, so checkForUpdates is optional
       loadPlayers();
       initializeBattingOrder();
       setupPositionListeners();
       setupBattingOrderListeners();
       loadSavedLineupsList();
     };
+
+    function disableFieldPositions() {
+      const positions = document.querySelectorAll('.position');
+      positions.forEach(pos => {
+        pos.style.opacity = '0.5';
+        pos.style.pointerEvents = 'none';
+        pos.title = 'Loading players...';
+      });
+    }
+
+    function enableFieldPositions() {
+      const positions = document.querySelectorAll('.position');
+      positions.forEach(pos => {
+        pos.style.opacity = '1';
+        pos.style.pointerEvents = 'auto';
+        pos.title = 'Click to select player';
+      });
+    }
 
     /**
    * Checks whether chemistry data has changed since last update
@@ -1087,6 +1108,8 @@
         .withSuccessHandler(function(data) {
           chemistryData = data;
           allPlayers = data.players.sort();
+          // Enable field positions now that data is loaded
+          enableFieldPositions();
         })
         .withFailureHandler(showError)
         .getLineupChemistryDataFromJSON();
