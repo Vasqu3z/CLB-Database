@@ -92,20 +92,22 @@ function parseStatsPresetChemistry(fileContent) {
         const value = matrix[i][j];
 
         // Convert 0/1/2 to chemistry values
-        // 0 = neutral/no chemistry (don't store)
-        // 1 = positive chemistry (+100)
-        // 2 = strong positive chemistry (+200)
-        let chemistry = 0;
-        if (value === 1) {
+        // 0 = negative chemistry (-100)
+        // 1 = neutral chemistry (0) - don't store
+        // 2 = positive chemistry (+100)
+        let chemistry = null;
+        if (value === 0) {
+          chemistry = -100;
+          // Count as negative
+        } else if (value === 1) {
+          chemistry = null; // Neutral - don't store
+        } else if (value === 2) {
           chemistry = 100;
           positiveCount++;
-        } else if (value === 2) {
-          chemistry = 200;
-          strongPositiveCount++;
         }
 
-        // Only store non-zero chemistry
-        if (chemistry !== 0) {
+        // Only store non-neutral chemistry (negative or positive)
+        if (chemistry !== null) {
           pairs.push({
             player1: GAME_CHARACTER_ORDER[i],
             player2: GAME_CHARACTER_ORDER[j],
@@ -127,11 +129,13 @@ function parseStatsPresetChemistry(fileContent) {
     writeToChemistryLookup(lookupSheet, pairs);
     updateChemistryDataJSON();
 
+    const negativeCount = pairs.filter(p => p.chemistry < 0).length;
+
     return {
       success: true,
       totalPairs: pairs.length,
       positiveCount: positiveCount,
-      strongPositiveCount: strongPositiveCount
+      negativeCount: negativeCount
     };
 
   } catch (e) {
@@ -184,10 +188,13 @@ function exportChemistryToStatsPreset() {
 
         if (idx1 !== undefined && idx2 !== undefined) {
           // Convert chemistry values back to 0/1/2 format
-          let value = 0;
-          if (chem >= 200) value = 2;      // Strong positive
-          else if (chem >= 100) value = 1; // Positive
-          else if (chem <= -100) value = 0; // Negative (treat as neutral for now)
+          // -100 or less = 0 (Negative)
+          // between -100 and 100 = 1 (Neutral)
+          // 100 or more = 2 (Positive)
+          let value = 1; // Default to neutral
+          if (chem <= -100) value = 0;      // Negative
+          else if (chem >= 100) value = 2;  // Positive
+          // else value stays 1 (Neutral)
 
           // Store in both directions (symmetric matrix)
           matrix[idx1][idx2] = value;
@@ -314,10 +321,12 @@ function getChemistryMatrix() {
 
         if (idx1 !== undefined && idx2 !== undefined) {
           // Convert to 0/1/2 format
-          let value = 0;
-          if (chem >= 200) value = 2;
-          else if (chem >= 100) value = 1;
-          else if (chem <= -100) value = 0;
+          // -100 or less = 0 (Negative)
+          // between -100 and 100 = 1 (Neutral)
+          // 100 or more = 2 (Positive)
+          let value = 1; // Default to neutral
+          if (chem <= -100) value = 0;      // Negative
+          else if (chem >= 100) value = 2;  // Positive
 
           matrix[idx1][idx2] = value;
           matrix[idx2][idx1] = value;
@@ -352,11 +361,16 @@ function updateChemistryMatrix(matrix) {
       for (let j = i + 1; j < 101; j++) {
         const value = matrix[i][j];
 
-        let chemistry = 0;
-        if (value === 1) chemistry = 100;
-        else if (value === 2) chemistry = 200;
+        // Convert 0/1/2 to chemistry values
+        // 0 = negative (-100)
+        // 1 = neutral (0) - don't store
+        // 2 = positive (+100)
+        let chemistry = null;
+        if (value === 0) chemistry = -100;      // Negative
+        else if (value === 1) chemistry = null; // Neutral - skip
+        else if (value === 2) chemistry = 100;  // Positive
 
-        if (chemistry !== 0) {
+        if (chemistry !== null) {
           pairs.push({
             player1: GAME_CHARACTER_ORDER[i],
             player2: GAME_CHARACTER_ORDER[j],

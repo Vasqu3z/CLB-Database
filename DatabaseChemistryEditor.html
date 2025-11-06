@@ -138,11 +138,21 @@
     }
 
     .chem-btn.none {
+      border-color: #f44336;
+      color: #f44336;
+    }
+
+    .chem-btn.none.active {
+      background: #f44336;
+      color: white;
+    }
+
+    .chem-btn.neutral {
       border-color: #999;
       color: #666;
     }
 
-    .chem-btn.none.active {
+    .chem-btn.neutral.active {
       background: #f0f0f0;
       border-color: #666;
     }
@@ -154,16 +164,6 @@
 
     .chem-btn.positive.active {
       background: #4CAF50;
-      color: white;
-    }
-
-    .chem-btn.strong {
-      border-color: #2196F3;
-      color: #2196F3;
-    }
-
-    .chem-btn.strong.active {
-      background: #2196F3;
       color: white;
     }
 
@@ -186,14 +186,14 @@
       border-left: 4px solid #ddd;
     }
 
+    .relationship-item.negative {
+      border-left-color: #f44336;
+      background: #ffebee;
+    }
+
     .relationship-item.positive {
       border-left-color: #4CAF50;
       background: #f1f8f4;
-    }
-
-    .relationship-item.strong {
-      border-left-color: #2196F3;
-      background: #f0f7ff;
     }
 
     .relationship-item .name {
@@ -207,13 +207,13 @@
       font-weight: 600;
     }
 
-    .relationship-item .value.positive {
-      background: #4CAF50;
+    .relationship-item .value.negative {
+      background: #f44336;
       color: white;
     }
 
-    .relationship-item .value.strong {
-      background: #2196F3;
+    .relationship-item .value.positive {
+      background: #4CAF50;
       color: white;
     }
 
@@ -391,13 +391,13 @@
           <label>Chemistry Value</label>
           <div class="chemistry-buttons">
             <button class="chem-btn none" onclick="setChemistry(0)">
-              None / Neutral<br><small>(0)</small>
+              Negative
             </button>
-            <button class="chem-btn positive" onclick="setChemistry(1)">
-              Positive<br><small>(+100)</small>
+            <button class="chem-btn neutral" onclick="setChemistry(1)">
+              Neutral
             </button>
-            <button class="chem-btn strong" onclick="setChemistry(2)">
-              Strong Positive<br><small>(+200)</small>
+            <button class="chem-btn positive" onclick="setChemistry(2)">
+              Positive
             </button>
           </div>
         </div>
@@ -425,8 +425,8 @@
               <div class="stat-label">Positive Chemistry</div>
             </div>
             <div class="stat">
-              <div class="stat-value" id="strongCount">0</div>
-              <div class="stat-label">Strong Positive</div>
+              <div class="stat-value" id="negativeCount">0</div>
+              <div class="stat-label">Negative Chemistry</div>
             </div>
           </div>
 
@@ -538,9 +538,9 @@
       if (currentChemistry === 0) {
         document.querySelector('.chem-btn.none').classList.add('active');
       } else if (currentChemistry === 1) {
-        document.querySelector('.chem-btn.positive').classList.add('active');
+        document.querySelector('.chem-btn.neutral').classList.add('active');
       } else if (currentChemistry === 2) {
-        document.querySelector('.chem-btn.strong').classList.add('active');
+        document.querySelector('.chem-btn.positive').classList.add('active');
       }
     }
 
@@ -576,7 +576,7 @@
       const relationships = [];
 
       for (let i = 0; i < characters.length; i++) {
-        if (i !== idx && row[i] !== 0) {
+        if (i !== idx && row[i] !== 1) { // Show non-neutral relationships
           relationships.push({
             index: i,
             name: characters[i],
@@ -587,8 +587,8 @@
 
       // Update stats
       document.getElementById('totalRelationships').textContent = relationships.length;
-      document.getElementById('positiveCount').textContent = relationships.filter(r => r.value === 1).length;
-      document.getElementById('strongCount').textContent = relationships.filter(r => r.value === 2).length;
+      document.getElementById('positiveCount').textContent = relationships.filter(r => r.value === 2).length;
+      document.getElementById('negativeCount').textContent = relationships.filter(r => r.value === 0).length;
 
       // Display relationships
       displayRelationships(relationships);
@@ -616,11 +616,19 @@
       relationships.forEach(rel => {
         const item = document.createElement('div');
         item.className = 'relationship-item';
-        if (rel.value === 1) item.classList.add('positive');
-        if (rel.value === 2) item.classList.add('strong');
 
-        const valueText = rel.value === 1 ? 'Positive (+100)' : 'Strong (+200)';
-        const valueClass = rel.value === 1 ? 'positive' : 'strong';
+        let valueText = 'Neutral';
+        let valueClass = 'neutral';
+
+        if (rel.value === 0) {
+          valueText = 'Negative';
+          valueClass = 'negative';
+          item.classList.add('negative');
+        } else if (rel.value === 2) {
+          valueText = 'Positive';
+          valueClass = 'positive';
+          item.classList.add('positive');
+        }
 
         item.innerHTML = `
           <span class="name">${rel.name}</span>
