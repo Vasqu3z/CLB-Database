@@ -1,5 +1,7 @@
-// ===== CONVERSION SCRIPT =====
-// Converts Chemistry Matrix to Chemistry Lookup with automatic variant handling
+// ===== CHEMISTRY CONVERSION =====
+// Purpose: Converts Chemistry Matrix to Chemistry Lookup with automatic variant expansion and Mii color support
+// Dependencies: DatabaseConfig.js
+// Entry Point(s): convertChemistryMatrixToLookupWithVariants(), updateChemistryDataJSON()
 
 /**
  * Main conversion function with confirmation prompt and Mii Color Chemistry support

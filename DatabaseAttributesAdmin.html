@@ -249,47 +249,134 @@
   </div>
 
   <script>
+    // ===== GLOBAL STATE =====
+    let allPlayers = [];
+
+    // ===== INITIALIZATION =====
     window.onload = function() {
+      // Disable all selects until data loads
+      disableAllSelects();
+
       google.script.run
         .withSuccessHandler(populatePlayerDropdowns)
         .withFailureHandler(showError)
         .getPlayerAttributeList();
     };
-    
-    function populatePlayerDropdowns(players) {
+
+    function disableAllSelects() {
       var selects = ['player1', 'player2', 'player3', 'player4', 'player5'];
-      
       selects.forEach(function(selectId) {
         var select = document.getElementById(selectId);
-        
+        select.disabled = true;
+        select.innerHTML = '<option value="">Loading players...</option>';
+      });
+    }
+
+    function populatePlayerDropdowns(players) {
+      allPlayers = players;
+      var selects = ['player1', 'player2', 'player3', 'player4', 'player5'];
+
+      selects.forEach(function(selectId, index) {
+        var select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">-- Select Player --</option>';
+
         players.forEach(function(player) {
           var option = document.createElement('option');
           option.value = player;
           option.textContent = player;
           select.appendChild(option);
         });
+
+        // Enable player1, disable others until progressive selection
+        select.disabled = (index > 0);
+
+        // Add change listener for progressive enabling
+        select.addEventListener('change', function() {
+          updateProgressiveSelects();
+        });
+      });
+
+      // Add search/filter functionality to each select
+      addSelectFilter();
+    }
+
+    function updateProgressiveSelects() {
+      var selects = ['player1', 'player2', 'player3', 'player4', 'player5'];
+
+      for (var i = 1; i < selects.length; i++) {
+        var prevSelect = document.getElementById(selects[i - 1]);
+        var currSelect = document.getElementById(selects[i]);
+
+        // Enable current select only if previous select has a value
+        currSelect.disabled = !prevSelect.value;
+
+        // Clear current select if it's being disabled
+        if (currSelect.disabled && currSelect.value) {
+          currSelect.value = '';
+        }
+      }
+    }
+
+    function addSelectFilter() {
+      var selects = ['player1', 'player2', 'player3', 'player4', 'player5'];
+
+      selects.forEach(function(selectId) {
+        var select = document.getElementById(selectId);
+
+        // Add keyboard search functionality
+        var searchTerm = '';
+        var searchTimeout;
+
+        select.addEventListener('keydown', function(e) {
+          // Clear previous timeout
+          clearTimeout(searchTimeout);
+
+          // Build search term
+          if (e.key.length === 1) {
+            searchTerm += e.key.toLowerCase();
+
+            // Find matching option
+            var options = Array.from(select.options);
+            var match = options.find(function(opt) {
+              return opt.textContent.toLowerCase().startsWith(searchTerm);
+            });
+
+            if (match) {
+              select.value = match.value;
+            }
+          }
+
+          // Clear search term after 1 second
+          searchTimeout = setTimeout(function() {
+            searchTerm = '';
+          }, 1000);
+        });
       });
     }
-    
+
+    // ===== CORE LOGIC & RENDERING =====
+
     function comparePlayers() {
       var player1 = document.getElementById('player1').value;
       var player2 = document.getElementById('player2').value;
       var player3 = document.getElementById('player3').value;
       var player4 = document.getElementById('player4').value;
       var player5 = document.getElementById('player5').value;
-      
-      if (!player1 || !player2) {
-        showError('Please select at least 2 players to compare.');
+
+      // Allow single player selection
+      if (!player1) {
+        showError('Please select at least 1 player.');
         return;
       }
-      
-      var playerNames = [player1, player2];
+
+      var playerNames = [player1];
+      if (player2) playerNames.push(player2);
       if (player3) playerNames.push(player3);
       if (player4) playerNames.push(player4);
       if (player5) playerNames.push(player5);
-      
+
       document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and calculating averages...</div>';
-      
+
       google.script.run
         .withSuccessHandler(displayResults)
         .withFailureHandler(showError)
@@ -598,6 +685,8 @@
       document.getElementById('player4').value = '';
       document.getElementById('player5').value = '';
       document.getElementById('results').innerHTML = '';
+      // Reset progressive enabling
+      updateProgressiveSelects();
     }
     
     function showError(error) {

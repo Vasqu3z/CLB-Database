@@ -16,15 +16,39 @@ function getPlayerList() {
   try {
     var props = PropertiesService.getScriptProperties();
     var dataJson = props.getProperty('CHEMISTRY_DATA');
-    
+
+    // Auto-refresh: Check if cache is missing or stale
     if (!dataJson) {
-      throw new Error('Chemistry data not found. Please run "Update Chemistry JSON" from the Chemistry Tools menu.');
+      var config = getConfig();
+      if (config.DEBUG.ENABLE_LOGGING) {
+        Logger.log('Chemistry JSON cache missing - reading from sheet and updating cache');
+      }
+      updateChemistryDataJSON();
+      dataJson = props.getProperty('CHEMISTRY_DATA');
+
+      if (!dataJson) {
+        throw new Error('Chemistry data not found. Please run "Update Chemistry JSON" from the Chemistry Tools menu.');
+      }
+    } else {
+      // Check if cache is stale
+      var freshnessCheck = checkIfChemistryDataNeedsUpdate();
+      if (freshnessCheck.needsUpdate) {
+        var config = getConfig();
+        if (config.DEBUG.ENABLE_LOGGING) {
+          Logger.log('Chemistry JSON cache stale - auto-refreshing: ' + freshnessCheck.reason);
+        }
+        updateChemistryDataJSON();
+        dataJson = props.getProperty('CHEMISTRY_DATA');
+      }
     }
-    
+
     var data = JSON.parse(dataJson);
     return data.players || [];
   } catch (e) {
-    Logger.log('Error in getPlayerList: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getPlayerList: ' + e.toString());
+    }
     throw e;
   }
 }
@@ -108,9 +132,12 @@ function getMultiplePlayerChemistry(playerNames) {
       players: results,
       teamAnalysis: teamAnalysis
     };
-    
+
   } catch (e) {
-    Logger.log('Error in getMultiplePlayerChemistry: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getMultiplePlayerChemistry: ' + e.toString());
+    }
     throw e;
   }
 }

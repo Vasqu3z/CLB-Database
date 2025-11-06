@@ -1,3 +1,8 @@
+// ===== MENU SYSTEM =====
+// Purpose: Creates the custom CLB Tools menu in Google Sheets with all tool access points
+// Dependencies: DatabaseConfig.js
+// Entry Point(s): onOpen()
+
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   

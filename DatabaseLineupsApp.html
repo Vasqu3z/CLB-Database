@@ -1008,6 +1008,7 @@
   <div id="positionTooltip" class="position-tooltip"></div>
 
   <script>
+    // ===== GLOBAL STATE =====
     let allPlayers = [];
     let chemistryData = null;
     let lineup = {};
@@ -1018,14 +1019,36 @@
     let draggedBattingIndex = null;
     let showAllChemistry = false;
 
+    // ===== INITIALIZATION =====
     window.onload = function() {
-      checkForUpdates();
+      // Disable field positions until data loads
+      disableFieldPositions();
+
+      // Auto-refresh handles cache updates, so checkForUpdates is optional
       loadPlayers();
       initializeBattingOrder();
       setupPositionListeners();
       setupBattingOrderListeners();
       loadSavedLineupsList();
     };
+
+    function disableFieldPositions() {
+      const positions = document.querySelectorAll('.position');
+      positions.forEach(pos => {
+        pos.style.opacity = '0.5';
+        pos.style.pointerEvents = 'none';
+        pos.title = 'Loading players...';
+      });
+    }
+
+    function enableFieldPositions() {
+      const positions = document.querySelectorAll('.position');
+      positions.forEach(pos => {
+        pos.style.opacity = '1';
+        pos.style.pointerEvents = 'auto';
+        pos.title = 'Click to select player';
+      });
+    }
 
     /**
    * Checks whether chemistry data has changed since last update
@@ -1085,12 +1108,18 @@
         .withSuccessHandler(function(data) {
           chemistryData = data;
           allPlayers = data.players.sort();
+          // Enable field positions now that data is loaded
+          enableFieldPositions();
         })
         .withFailureHandler(showError)
         .getLineupChemistryDataFromJSON();
     }
 
-    // FIXED: Simplified position listeners using native drag-and-drop
+    // ===== DOM & EVENT LISTENERS =====
+
+    /**
+     * Sets up drag-and-drop and click listeners for field positions.
+     */
     function setupPositionListeners() {
       const positions = document.querySelectorAll('.position');
       positions.forEach(pos => {
@@ -1369,6 +1398,12 @@
       return null;
     }
 
+    // ===== MODAL LOGIC =====
+
+    /**
+     * Opens the player selection modal for a given position.
+     * @param {string} position - The position being edited (e.g., "P", "C").
+     */
     function openPlayerModal(position) {
       currentPosition = position;
       selectedPlayer = lineup[position] || null;
@@ -1470,6 +1505,13 @@
       selectedPlayer = null;
     }
 
+    // ===== CORE LOGIC & RENDERING =====
+
+    /**
+     * Updates the UI for a specific field position.
+     * @param {string} position - The position to update.
+     * @param {string | null} playerName - The player to place, or null to clear.
+     */
     function updatePosition(position, playerName) {
       const posElement = document.querySelector(`[data-position="${position}"]`);
       const nameElement = posElement.querySelector('.position-name');

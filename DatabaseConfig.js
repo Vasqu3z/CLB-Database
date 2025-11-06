@@ -1,5 +1,7 @@
-// ===== CONFIGURATION FILE =====
-// Customize sheet names and data sources for all CLB Tools
+// ===== CONFIGURATION =====
+// Purpose: Central configuration for all CLB Tools (sheet names, column mappings, thresholds, debug settings)
+// Dependencies: None (foundational config file)
+// Entry Point(s): getConfig()
 
 var CONFIG = {
   // Sheet Names
@@ -12,31 +14,31 @@ var CONFIG = {
   
   // Attribute Sheet Configuration
   ATTRIBUTES_CONFIG: {
-    // Column mappings (1-indexed, as used by Google Sheets)
+    // Column mappings (0-indexed, for array access)
     COLUMNS: {
-      NAME: 1,                // Column A
-      CHARACTER_CLASS: 2,     // Column B
-      ARM_SIDE: 3,            // Column C
-      BATTING_SIDE: 4,        // Column D
-      WEIGHT: 5,              // Column E
-      ABILITY: 6,             // Column F
-      PITCHING_OVERALL: 7,    // Column G
-      BATTING_OVERALL: 8,     // Column H
-      FIELDING_OVERALL: 9,    // Column I
-      SPEED_OVERALL: 10,      // Column J
-      HITTING_TRAJECTORY: 11, // Column K
-      SLAP_HIT_CONTACT: 12,   // Column L
-      CHARGE_HIT_CONTACT: 13, // Column M
-      SLAP_HIT_POWER: 14,     // Column N
-      CHARGE_HIT_POWER: 15,   // Column O
-      SPEED: 16,              // Column P
-      BUNTING: 17,            // Column Q
-      THROWING_SPEED: 18,     // Column R
-      FIELDING: 19,           // Column S
-      CURVEBALL_SPEED: 20,    // Column T
-      FASTBALL_SPEED: 21,     // Column U
-      CURVE: 22,              // Column V
-      STAMINA: 23             // Column W
+      NAME: 0,                // Column A (1)
+      CHARACTER_CLASS: 1,     // Column B (2)
+      ARM_SIDE: 2,            // Column C (3)
+      BATTING_SIDE: 3,        // Column D (4)
+      WEIGHT: 4,              // Column E (5)
+      ABILITY: 5,             // Column F (6)
+      PITCHING_OVERALL: 6,    // Column G (7)
+      BATTING_OVERALL: 7,     // Column H (8)
+      FIELDING_OVERALL: 8,    // Column I (9)
+      SPEED_OVERALL: 9,       // Column J (10)
+      HITTING_TRAJECTORY: 10, // Column K (11)
+      SLAP_HIT_CONTACT: 11,   // Column L (12)
+      CHARGE_HIT_CONTACT: 12, // Column M (13)
+      SLAP_HIT_POWER: 13,     // Column N (14)
+      CHARGE_HIT_POWER: 14,   // Column O (15)
+      SPEED: 15,              // Column P (16)
+      BUNTING: 16,            // Column Q (17)
+      THROWING_SPEED: 17,     // Column R (18)
+      FIELDING: 18,           // Column S (19)
+      CURVEBALL_SPEED: 19,    // Column T (20)
+      FASTBALL_SPEED: 20,     // Column U (21)
+      CURVE: 21,              // Column V (22)
+      STAMINA: 22             // Column W (23)
     },
     FIRST_DATA_ROW: 2,      // First row of data (after headers)
     TOTAL_COLUMNS: 23       // Total columns to read (A through W)
@@ -44,16 +46,27 @@ var CONFIG = {
   
   // Chemistry Sheet Configuration
   CHEMISTRY_CONFIG: {
+    // Column mappings for Chemistry Lookup sheet (0-indexed, for array access)
+    COLUMNS: {
+      PLAYER_1: 0,          // Column A (1)
+      PLAYER_2: 1,          // Column B (2)
+      CHEMISTRY_VALUE: 2    // Column C (3)
+    },
     FIRST_DATA_ROW: 2,      // First row with character names in column A
     FIRST_DATA_COLUMN: 2,   // First column with chemistry values (column B)
     HEADER_ROW: 1,          // Row with character names across the top
     NAME_COLUMN: 1,         // Column with character names (column A)
-    
+
     // Chemistry value thresholds
     THRESHOLDS: {
       POSITIVE_MIN: 100,    // Values >= 100 are positive chemistry
       NEGATIVE_MAX: -100    // Values <= -100 are negative chemistry
     }
+  },
+
+  // Debug Configuration
+  DEBUG: {
+    ENABLE_LOGGING: true
   },
   
   // Tool Display Names

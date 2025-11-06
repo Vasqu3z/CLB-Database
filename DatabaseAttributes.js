@@ -1,5 +1,7 @@
-// ===== PLAYER ATTRIBUTE COMPARISON TOOL =====
-// Compare player attributes from the Player Database
+// ===== PLAYER ATTRIBUTE COMPARISON =====
+// Purpose: Retrieve and compare player attributes with in-memory caching for performance
+// Dependencies: DatabaseConfig.js
+// Entry Point(s): getPlayerAttributes(), getPlayerAttributesWithAverages(), showAttributeComparison()
 
 function showAttributeComparison() {
   var html = HtmlService.createHtmlOutputFromFile('DatabaseAttributesApp')
@@ -10,7 +12,7 @@ function showAttributeComparison() {
 }
 
 function showAttributeComparisonAdmin() {
-  var html = HtmlService.createHtmlOutputFromFile('AttributesToolAdmin')
+  var html = HtmlService.createHtmlOutputFromFile('DatabaseAttributesAdmin')
     .setWidth(1100)
     .setHeight(700)
     .setTitle('Player Attribute Comparison (Admin)');
@@ -85,7 +87,10 @@ function getPlayerAttributeList() {
     if (!data) return [];
     return data.players;
   } catch (e) {
-    Logger.log('Error in getPlayerAttributeList: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getPlayerAttributeList: ' + e.toString());
+    }
     throw e;
   }
 }
@@ -94,60 +99,65 @@ function getPlayerAttributes(playerNames) {
   try {
     var data = getAttributeData();
     if (!data) return [];
-    
+
+    var config = data.config;
+    var COLS = config.ATTRIBUTES_CONFIG.COLUMNS;
     var results = [];
-    
+
     for (var p = 0; p < playerNames.length; p++) {
       var playerName = playerNames[p];
       var row = data.map[playerName];
-      
+
       if (!row) continue;
-      
+
       var playerData = {
         name: playerName,
-        characterClass: row[1],
-        armSide: row[2],
-        battingSide: row[3],
-        weight: row[4],
-        ability: row[5],
-        
+        characterClass: row[COLS.CHARACTER_CLASS],
+        armSide: row[COLS.ARM_SIDE],
+        battingSide: row[COLS.BATTING_SIDE],
+        weight: row[COLS.WEIGHT],
+        ability: row[COLS.ABILITY],
+
         // Overall stats
-        pitchingOverall: row[6],
-        battingOverall: row[7],
-        fieldingOverall: row[8],
-        speedOverall: row[9],
-        
+        pitchingOverall: row[COLS.PITCHING_OVERALL],
+        battingOverall: row[COLS.BATTING_OVERALL],
+        fieldingOverall: row[COLS.FIELDING_OVERALL],
+        speedOverall: row[COLS.SPEED_OVERALL],
+
         // Hitting attributes
-        hittingTrajectory: row[10],
-        slapHitContact: row[11],
-        chargeHitContact: row[12],
-        slapHitPower: row[13],
-        chargeHitPower: row[14],
-        
-        
+        hittingTrajectory: row[COLS.HITTING_TRAJECTORY],
+        slapHitContact: row[COLS.SLAP_HIT_CONTACT],
+        chargeHitContact: row[COLS.CHARGE_HIT_CONTACT],
+        slapHitPower: row[COLS.SLAP_HIT_POWER],
+        chargeHitPower: row[COLS.CHARGE_HIT_POWER],
+
+
         // Running attributes
-        speed: row[15],
-        bunting: row[16],
-        
+        speed: row[COLS.SPEED],
+        bunting: row[COLS.BUNTING],
+
         // Fielding attributes
-        throwingSpeed: row[17],
-        fielding: row[18],
-        
+        throwingSpeed: row[COLS.THROWING_SPEED],
+        fielding: row[COLS.FIELDING],
+
         // Pitching attributes
-        curveballSpeed: row[19],
-        fastballSpeed: row[20],
-        curve: row[21],
-        
+        curveballSpeed: row[COLS.CURVEBALL_SPEED],
+        fastballSpeed: row[COLS.FASTBALL_SPEED],
+        curve: row[COLS.CURVE],
+
         // Stamina
-        stamina: row[22]
+        stamina: row[COLS.STAMINA]
       };
-      
+
       results.push(playerData);
     }
-    
+
     return results;
   } catch (e) {
-    Logger.log('Error in getPlayerAttributes: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getPlayerAttributes: ' + e.toString());
+    }
     throw e;
   }
 }
@@ -158,52 +168,54 @@ function getPlayerAttributesWithAverages(playerNames) {
   try {
     var data = getAttributeData();
     if (!data) return [];
-    
+
+    var config = data.config;
+    var COLS = config.ATTRIBUTES_CONFIG.COLUMNS;
     var results = [];
-    
+
     for (var p = 0; p < playerNames.length; p++) {
       var playerName = playerNames[p];
       var row = data.map[playerName];
-      
+
       if (!row) continue;
-      
+
       var playerData = {
         name: playerName,
-        characterClass: row[1],
-        armSide: row[2],
-        battingSide: row[3],
-        weight: row[4],
-        ability: row[5],
-        
+        characterClass: row[COLS.CHARACTER_CLASS],
+        armSide: row[COLS.ARM_SIDE],
+        battingSide: row[COLS.BATTING_SIDE],
+        weight: row[COLS.WEIGHT],
+        ability: row[COLS.ABILITY],
+
         // Overall stats
-        pitchingOverall: row[6],
-        battingOverall: row[7],
-        fieldingOverall: row[8],
-        speedOverall: row[9],
-        
+        pitchingOverall: row[COLS.PITCHING_OVERALL],
+        battingOverall: row[COLS.BATTING_OVERALL],
+        fieldingOverall: row[COLS.FIELDING_OVERALL],
+        speedOverall: row[COLS.SPEED_OVERALL],
+
         // Hitting attributes
-        hittingTrajectory: row[10],
-        slapHitContact: row[11],
-        chargeHitContact: row[12],
-        slapHitPower: row[13],
-        chargeHitPower: row[14],
-        
-        
+        hittingTrajectory: row[COLS.HITTING_TRAJECTORY],
+        slapHitContact: row[COLS.SLAP_HIT_CONTACT],
+        chargeHitContact: row[COLS.CHARGE_HIT_CONTACT],
+        slapHitPower: row[COLS.SLAP_HIT_POWER],
+        chargeHitPower: row[COLS.CHARGE_HIT_POWER],
+
+
         // Running attributes
-        speed: row[15],
-        bunting: row[16],
-        
+        speed: row[COLS.SPEED],
+        bunting: row[COLS.BUNTING],
+
         // Fielding attributes
-        throwingSpeed: row[17],
-        fielding: row[18],
-        
+        throwingSpeed: row[COLS.THROWING_SPEED],
+        fielding: row[COLS.FIELDING],
+
         // Pitching attributes
-        curveballSpeed: row[19],
-        fastballSpeed: row[20],
-        curve: row[21],
-        
+        curveballSpeed: row[COLS.CURVEBALL_SPEED],
+        fastballSpeed: row[COLS.FASTBALL_SPEED],
+        curve: row[COLS.CURVE],
+
         // Stamina
-        stamina: row[22]
+        stamina: row[COLS.STAMINA]
       };
       
       // Calculate individual player averages
@@ -234,7 +246,10 @@ function getPlayerAttributesWithAverages(playerNames) {
     
     return results;
   } catch (e) {
-    Logger.log('Error in getPlayerAttributesWithAverages: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getPlayerAttributesWithAverages: ' + e.toString());
+    }
     throw e;
   }
 }

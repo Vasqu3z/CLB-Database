@@ -523,15 +523,26 @@
   </div>
 
   <script>
+    // ===== GLOBAL STATE =====
     let allPlayers = [];
     let selectedPlayers = [];
     let currentData = null;
     let showingSummary = false;
 
+    // ===== INITIALIZATION =====
     window.onload = function() {
+      // Disable all selects until data loads
+      disableAllSelects();
       loadPlayers();
-      setupSelectors();
     };
+
+    function disableAllSelects() {
+      for (let i = 1; i <= 4; i++) {
+        const select = document.getElementById('player' + i);
+        select.disabled = true;
+        select.innerHTML = '<option value="">Loading players...</option>';
+      }
+    }
 
     function loadPlayers() {
       google.script.run
@@ -543,33 +554,96 @@
     function populatePlayers(players) {
       const loading = document.getElementById('loadingMessage');
       loading.style.display = 'none';
-      
+
       if (!players || players.length === 0) {
         showError('No players found in the database.');
         return;
       }
-      
+
       allPlayers = players;
-      
+
       // Populate all dropdowns
       for (let i = 1; i <= 4; i++) {
         const select = document.getElementById('player' + i);
+        select.innerHTML = '<option value="">-- Select Player --</option>';
+
         players.forEach(function(player) {
           const option = document.createElement('option');
           option.value = player;
           option.textContent = player;
           select.appendChild(option);
         });
-      }
-    }
 
-    function setupSelectors() {
-      for (let i = 1; i <= 4; i++) {
-        const select = document.getElementById('player' + i);
+        // Enable player1, disable others until progressive selection
+        select.disabled = (i > 1);
+
+        // Add change listener for progressive enabling and duplicate detection
         select.addEventListener('change', function() {
+          updateProgressiveSelects();
           updateSelectedPlayers();
         });
       }
+
+      // Add search/filter functionality to each select
+      addSelectFilter();
+    }
+
+    function updateProgressiveSelects() {
+      for (let i = 2; i <= 4; i++) {
+        const prevSelect = document.getElementById('player' + (i - 1));
+        const currSelect = document.getElementById('player' + i);
+
+        // Enable current select only if previous select has a value
+        currSelect.disabled = !prevSelect.value;
+
+        // Clear current select if it's being disabled
+        if (currSelect.disabled && currSelect.value) {
+          currSelect.value = '';
+        }
+      }
+    }
+
+    function addSelectFilter() {
+      for (let i = 1; i <= 4; i++) {
+        const select = document.getElementById('player' + i);
+
+        // Add keyboard search functionality
+        let searchTerm = '';
+        let searchTimeout;
+
+        select.addEventListener('keydown', function(e) {
+          // Clear previous timeout
+          clearTimeout(searchTimeout);
+
+          // Build search term
+          if (e.key.length === 1) {
+            searchTerm += e.key.toLowerCase();
+
+            // Find matching option
+            const options = Array.from(select.options);
+            const match = options.find(function(opt) {
+              return opt.textContent.toLowerCase().startsWith(searchTerm);
+            });
+
+            if (match) {
+              select.value = match.value;
+              // Trigger change event to update progressive selects
+              select.dispatchEvent(new Event('change'));
+            }
+          }
+
+          // Clear search term after 1 second
+          searchTimeout = setTimeout(function() {
+            searchTerm = '';
+          }, 1000);
+        });
+      }
+    }
+
+    // ===== DOM & EVENT LISTENERS =====
+
+    function setupSelectors() {
+      // Selectors are now set up in populatePlayers()
     }
 
     function updateSelectedPlayers() {
@@ -593,16 +667,18 @@
         }
       }
       
-      // Enable/disable buttons
+      // Enable/disable buttons (allow single player selection)
       const compareBtn = document.getElementById('compareBtn');
       const summaryBtn = document.getElementById('summaryBtn');
-      
+
       compareBtn.disabled = selectedPlayers.length === 0;
       summaryBtn.disabled = selectedPlayers.length < 2;
     }
 
     function comparePlayers() {
+      // Allow single player selection
       if (selectedPlayers.length === 0) {
+        showError('Please select at least 1 player.');
         return;
       }
       
@@ -617,6 +693,8 @@
         .withFailureHandler(showError)
         .getMultiplePlayerChemistry(selectedPlayers);
     }
+
+    // ===== CORE LOGIC & RENDERING =====
 
     function displayComparison(data) {
       document.getElementById('loadingMessage').style.display = 'none';
@@ -856,6 +934,8 @@ function clearAll() {
   const btn = document.getElementById('summaryBtn');
   btn.textContent = 'Team Summary';
   btn.style.background = '#28a745';
+  // Reset progressive enabling
+  updateProgressiveSelects();
 }
 
 function showError(error) {
