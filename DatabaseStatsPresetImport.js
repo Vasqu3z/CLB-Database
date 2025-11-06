@@ -136,10 +136,8 @@ function createCharacterNameMappingSheet(ss, config) {
     mappingSheet.setColumnWidth(1, mappingConfig.COLUMN_WIDTHS.PYTHON_NAME);
     mappingSheet.setColumnWidth(2, mappingConfig.COLUMN_WIDTHS.CUSTOM_NAME);
 
-    // Freeze header row
     mappingSheet.setFrozenRows(1);
 
-    // Populate with all 101 characters
     const mappingData = [];
     for (let i = 0; i < GAME_CHARACTER_ORDER.length; i++) {
       const pythonName = GAME_CHARACTER_ORDER[i];
@@ -147,10 +145,7 @@ function createCharacterNameMappingSheet(ss, config) {
       mappingData.push([pythonName, customName]);
     }
 
-    // Write all mappings at once
     mappingSheet.getRange(2, 1, mappingData.length, 2).setValues(mappingData);
-
-    // Add note to column B header
     mappingSheet.getRange(1, 2).setNote(
       'Edit these names to match your custom naming convention.\n\n' +
       'Pattern-based conversions applied for VARIANTS ONLY:\n' +
@@ -184,10 +179,8 @@ function loadCharacterNameMappings(mappingSheet) {
     const lastRow = mappingSheet.getLastRow();
     if (lastRow < 2) return mappings;
 
-    // Read all mappings at once (skip header)
     const data = mappingSheet.getRange(2, 1, lastRow - 1, 2).getValues();
 
-    // Build lookup map
     for (let i = 0; i < data.length; i++) {
       const pythonName = String(data[i][0]).trim();
       const customName = String(data[i][1]).trim();
@@ -282,7 +275,6 @@ function parseFullStatsPreset(fileContent) {
  * Parse chemistry section (lines 0-100, 101x101 matrix)
  */
 function parseChemistrySection(chemistryLines, ss, config, nameMappings) {
-  // Parse matrix
   const matrix = [];
   for (let i = 0; i < 101; i++) {
     const row = chemistryLines[i].split(',').map(v => {
@@ -300,7 +292,6 @@ function parseChemistrySection(chemistryLines, ss, config, nameMappings) {
     matrix.push(row);
   }
 
-  // Convert to lookup pairs
   const pairs = [];
   let positiveCount = 0;
   let negativeCount = 0;
@@ -335,7 +326,6 @@ function parseChemistrySection(chemistryLines, ss, config, nameMappings) {
     }
   }
 
-  // Write to Chemistry Lookup sheet
   let lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
 
   if (!lookupSheet) {
@@ -356,7 +346,6 @@ function parseChemistrySection(chemistryLines, ss, config, nameMappings) {
  * Parse stats section (lines 101-201, 101x30 matrix)
  */
 function parseStatsSection(statsLines, ss, config, nameMappings) {
-  // Parse stats matrix
   const statsMatrix = [];
   for (let i = 0; i < 101; i++) {
     const row = statsLines[i].split(',').map(v => parseInt(v.trim()));
@@ -368,13 +357,11 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     statsMatrix.push(row);
   }
 
-  // Get or create Advanced Attributes sheet
   let attributesSheet = ss.getSheetByName(config.SHEETS.ATTRIBUTES);
 
   if (!attributesSheet) {
     attributesSheet = ss.insertSheet(config.SHEETS.ATTRIBUTES);
 
-    // Set up headers (row 1)
     const headers = [
       'Name', 'Character Class', 'Captain', 'Mii', 'Mii Color', 'Arm Side', 'Batting Side', 'Weight',
       'Ability', 'Pitching Overall', 'Batting Overall', 'Fielding Overall', 'Speed Overall',
@@ -384,7 +371,6 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     ];
     attributesSheet.getRange(1, 1, 1, 30).setValues([headers]);
 
-    // Format header row
     const headerRange = attributesSheet.getRange(1, 1, 1, 30);
     headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
     headerRange.setFontColor(config.COLORS.HEADER_TEXT);
@@ -393,7 +379,6 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     attributesSheet.setFrozenRows(1);
   }
 
-  // Prepare data for sheet (skip header row, start at row 2)
   const sheetData = [];
 
   for (let i = 0; i < 101; i++) {
@@ -401,7 +386,6 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     const pythonName = GAME_CHARACTER_ORDER[i];
     const characterName = getCustomCharacterName(nameMappings, pythonName);
 
-    // Map preset indices to sheet columns
     const sheetRow = [
       characterName,                                  // Column A - NAME
       CHARACTER_CLASSES[presetRow[2]] || '',         // Column B - CHARACTER_CLASS (preset index 2)
@@ -438,7 +422,6 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     sheetData.push(sheetRow);
   }
 
-  // Write all data at once (starting from row 2)
   attributesSheet.getRange(2, 1, 101, 30).setValues(sheetData);
 
   return {
@@ -527,23 +510,19 @@ function logImportEvent(stats) {
     const sheetName = config.SHEETS.CHEMISTRY_CHANGE_LOG;
     let logSheet = ss.getSheetByName(sheetName);
 
-    // Create sheet if it doesn't exist
     if (!logSheet) {
       logSheet = ss.insertSheet(sheetName);
 
-      // Set up headers
       logSheet.getRange(1, 1, 1, 6).setValues([
         ['Timestamp', 'Character 1', 'Character 2', 'Old Value', 'New Value', 'Notes']
       ]);
 
-      // Format header row
       const headerRange = logSheet.getRange(1, 1, 1, 6);
       headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
       headerRange.setFontColor(config.COLORS.HEADER_TEXT);
       headerRange.setFontWeight('bold');
       headerRange.setHorizontalAlignment('center');
 
-      // Set column widths using config
       const logConfig = config.CHEMISTRY_CHANGE_LOG_CONFIG;
       logSheet.setColumnWidth(1, logConfig.COLUMN_WIDTHS.TIMESTAMP);
       logSheet.setColumnWidth(2, logConfig.COLUMN_WIDTHS.CHARACTER_1);
@@ -555,7 +534,6 @@ function logImportEvent(stats) {
       logSheet.setFrozenRows(1);
     }
 
-    // Add import event row
     const timestamp = new Date();
     const newRow = [
       timestamp,
@@ -563,19 +541,14 @@ function logImportEvent(stats) {
       `${stats.chemistryPairs} chemistry pairs`,
       `${stats.statsUpdated} characters`,
       stats.trajectoryStored ? 'Trajectory stored' : 'No trajectory',
-      '' // Empty notes column
+      ''
     ];
 
     logSheet.appendRow(newRow);
 
-    // Format the timestamp cell
     const lastRow = logSheet.getLastRow();
     logSheet.getRange(lastRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
-
-    // Add border to new row
     logSheet.getRange(lastRow, 1, 1, 6).setBorder(true, true, true, true, true, true);
-
-    // Highlight import event using config color
     logSheet.getRange(lastRow, 1, 1, 6).setBackground(config.COLORS.IMPORT_EXPORT_HIGHLIGHT);
 
   } catch (e) {
@@ -603,27 +576,19 @@ function exportChemistryToStatsPreset() {
     const config = getConfig();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // ===== SECTION 1: CHEMISTRY (Lines 0-100) =====
     const chemistryLines = exportChemistrySection(ss, config);
-
-    // ===== SECTION 2: STATS (Lines 101-201) =====
     const statsLines = exportStatsSection(ss, config);
-
-    // ===== SECTION 3: TRAJECTORY (Lines 202-227) =====
     const trajectoryLines = exportTrajectorySection(ss, config);
 
-    // Combine all sections
     const allLines = [...chemistryLines, ...statsLines, ...trajectoryLines];
     const content = allLines.join('\n');
 
-    // Log the export event
     logExportEvent({
       chemistryExported: true,
       statsExported: true,
       trajectoryExported: trajectoryLines.length > 0
     });
 
-    // Create download via HTML dialog
     const html = HtmlService.createHtmlOutput(`
       <!DOCTYPE html>
       <html>
@@ -716,16 +681,13 @@ function exportChemistrySection(ss, config) {
     throw new Error('Chemistry Lookup sheet not found');
   }
 
-  // Initialize 101x101 matrix with neutral (1) as default
   const matrix = Array(101).fill(null).map(() => Array(101).fill(1));
 
-  // Build character name to index map
   const nameToIndex = {};
   GAME_CHARACTER_ORDER.forEach((name, idx) => {
     nameToIndex[name] = idx;
   });
 
-  // Read Chemistry Lookup and populate matrix
   const lastRow = lookupSheet.getLastRow();
   if (lastRow > 1) {
     const data = lookupSheet.getRange(2, 1, lastRow - 1, 3).getValues();
@@ -741,19 +703,16 @@ function exportChemistrySection(ss, config) {
       const idx2 = nameToIndex[player2];
 
       if (idx1 !== undefined && idx2 !== undefined) {
-        // Convert chemistry values back to preset format using config thresholds
-        let value = thresholds.NEUTRAL_PRESET; // Default to neutral
+        let value = thresholds.NEUTRAL_PRESET;
         if (chem <= thresholds.NEGATIVE_MAX) value = thresholds.NEGATIVE_PRESET;
         else if (chem >= thresholds.POSITIVE_MIN) value = thresholds.POSITIVE_PRESET;
 
-        // Store in both directions (symmetric matrix)
         matrix[idx1][idx2] = value;
         matrix[idx2][idx1] = value;
       }
     });
   }
 
-  // Convert matrix to lines
   return matrix.map(row => row.join(','));
 }
 
@@ -767,31 +726,25 @@ function exportStatsSection(ss, config) {
     throw new Error('Advanced Attributes sheet not found or empty');
   }
 
-  // Read all character data (rows 2-102, columns A-AD)
   const sheetData = attributesSheet.getRange(2, 1, 101, 30).getValues();
 
-  // Build character name to index map
   const nameToIndex = {};
   GAME_CHARACTER_ORDER.forEach((name, idx) => {
     nameToIndex[name] = idx;
   });
 
-  // Initialize preset matrix (101 characters x 30 fields)
   const presetMatrix = Array(101).fill(null).map(() => Array(30).fill(0));
 
-  // Process each row
   sheetData.forEach((row, idx) => {
     const characterName = String(row[0]).trim();
     const charIndex = nameToIndex[characterName];
 
     if (charIndex === undefined) {
-      // Skip unknown characters
       return;
     }
 
     const presetRow = presetMatrix[charIndex];
 
-    // Map sheet columns back to preset indices (skip MII at row[3] and MII_COLOR at row[4])
     presetRow[0] = ARM_SIDES.indexOf(row[5]) || 0;                    // ARM_SIDE
     presetRow[1] = ARM_SIDES.indexOf(row[6]) || 0;                    // BATTING_SIDE
     presetRow[2] = CHARACTER_CLASSES.indexOf(row[1]) || 0;            // CHARACTER_CLASS
@@ -799,14 +752,12 @@ function exportStatsSection(ss, config) {
     presetRow[4] = Number(row[7]) || 0;                               // WEIGHT
     presetRow[5] = row[2] === 'Yes' ? 1 : 0;                          // CAPTAIN
 
-    // Split STAR_PITCH back to indices 6 and 29
     const starPitchSplit = splitStarPitchField(row[25]);
     presetRow[6] = starPitchSplit.starPitchIndex;                     // STAR_PITCH
     presetRow[29] = starPitchSplit.starPitchTypeIndex;                // STAR_PITCH_TYPE
 
     presetRow[7] = STAR_SWINGS.indexOf(row[13]) || 0;                 // STAR_SWING
 
-    // Split ABILITY back to indices 8 and 9
     const abilitySplit = splitAbilityField(row[8]);
     presetRow[8] = abilitySplit.fieldingIndex;                        // FIELDING_ABILITY
     presetRow[9] = abilitySplit.baserunningIndex;                     // BASERUNNING_ABILITY
@@ -833,7 +784,6 @@ function exportStatsSection(ss, config) {
     // presetRow[29] already set above (STAR_PITCH_TYPE)
   });
 
-  // Convert matrix to lines
   return presetMatrix.map(row => row.join(','));
 }
 
@@ -843,19 +793,16 @@ function exportStatsSection(ss, config) {
 function splitAbilityField(abilityValue) {
   const ability = String(abilityValue).trim();
 
-  // Check if it's a baserunning ability
   const baserunningIndex = BASERUNNING_ABILITIES.indexOf(ability);
   if (baserunningIndex > 0) {
     return { fieldingIndex: 0, baserunningIndex: baserunningIndex };
   }
 
-  // Otherwise it's a fielding ability
   const fieldingIndex = FIELDING_ABILITIES.indexOf(ability);
   if (fieldingIndex > 0) {
     return { fieldingIndex: fieldingIndex, baserunningIndex: 0 };
   }
 
-  // None or unknown
   return { fieldingIndex: 0, baserunningIndex: 0 };
 }
 
@@ -865,19 +812,16 @@ function splitAbilityField(abilityValue) {
 function splitStarPitchField(starPitchValue) {
   const starPitch = String(starPitchValue).trim();
 
-  // Check if it's a special pitch (non-standard)
   const specialPitchIndex = STAR_PITCHES.indexOf(starPitch);
   if (specialPitchIndex > 0) {
     return { starPitchIndex: specialPitchIndex, starPitchTypeIndex: 0 };
   }
 
-  // Otherwise it's a pitch type
   const pitchTypeIndex = STAR_PITCH_TYPES.indexOf(starPitch);
   if (pitchTypeIndex >= 0) {
     return { starPitchIndex: 0, starPitchTypeIndex: pitchTypeIndex };
   }
 
-  // Unknown or None
   return { starPitchIndex: 0, starPitchTypeIndex: 0 };
 }
 
@@ -916,23 +860,19 @@ function logExportEvent(stats) {
     const sheetName = config.SHEETS.CHEMISTRY_CHANGE_LOG;
     let logSheet = ss.getSheetByName(sheetName);
 
-    // Create sheet if it doesn't exist
     if (!logSheet) {
       logSheet = ss.insertSheet(sheetName);
 
-      // Set up headers
       logSheet.getRange(1, 1, 1, 6).setValues([
         ['Timestamp', 'Character 1', 'Character 2', 'Old Value', 'New Value', 'Notes']
       ]);
 
-      // Format header row
       const headerRange = logSheet.getRange(1, 1, 1, 6);
       headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
       headerRange.setFontColor(config.COLORS.HEADER_TEXT);
       headerRange.setFontWeight('bold');
       headerRange.setHorizontalAlignment('center');
 
-      // Set column widths using config
       const logConfig = config.CHEMISTRY_CHANGE_LOG_CONFIG;
       logSheet.setColumnWidth(1, logConfig.COLUMN_WIDTHS.TIMESTAMP);
       logSheet.setColumnWidth(2, logConfig.COLUMN_WIDTHS.CHARACTER_1);
@@ -944,7 +884,6 @@ function logExportEvent(stats) {
       logSheet.setFrozenRows(1);
     }
 
-    // Add export event row
     const timestamp = new Date();
     const newRow = [
       timestamp,
@@ -952,19 +891,14 @@ function logExportEvent(stats) {
       'Full stats preset',
       '228 lines',
       stats.trajectoryExported ? 'With trajectory' : 'No trajectory',
-      '' // Empty notes column
+      ''
     ];
 
     logSheet.appendRow(newRow);
 
-    // Format the timestamp cell
     const lastRow = logSheet.getLastRow();
     logSheet.getRange(lastRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
-
-    // Add border to new row
     logSheet.getRange(lastRow, 1, 1, 6).setBorder(true, true, true, true, true, true);
-
-    // Highlight export event using config color
     logSheet.getRange(lastRow, 1, 1, 6).setBackground(config.COLORS.POSITIVE_HIGHLIGHT);
 
   } catch (e) {
@@ -996,16 +930,13 @@ function getChemistryMatrix() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
 
-    // Initialize matrix with neutral (1) as default
     const matrix = Array(101).fill(null).map(() => Array(101).fill(1));
 
-    // Build character name to index map
     const nameToIndex = {};
     GAME_CHARACTER_ORDER.forEach((name, idx) => {
       nameToIndex[name] = idx;
     });
 
-    // Read Chemistry Lookup
     if (lookupSheet && lookupSheet.getLastRow() > 1) {
       const data = lookupSheet.getRange(2, 1, lookupSheet.getLastRow() - 1, 3).getValues();
       const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
@@ -1019,8 +950,7 @@ function getChemistryMatrix() {
         const idx2 = nameToIndex[player2];
 
         if (idx1 !== undefined && idx2 !== undefined) {
-          // Convert to preset format using config thresholds
-          let value = thresholds.NEUTRAL_PRESET; // Default to neutral
+          let value = thresholds.NEUTRAL_PRESET;
           if (chem <= thresholds.NEGATIVE_MAX) value = thresholds.NEGATIVE_PRESET;
           else if (chem >= thresholds.POSITIVE_MIN) value = thresholds.POSITIVE_PRESET;
 
@@ -1051,7 +981,6 @@ function getChemistryMatrix() {
  */
 function updateChemistryMatrix(matrix, changes) {
   try {
-    // Log all changes
     if (changes && changes.length > 0) {
       changes.forEach(change => {
         logChemistryChange(
@@ -1063,7 +992,6 @@ function updateChemistryMatrix(matrix, changes) {
       });
     }
 
-    // Convert matrix to pairs
     const config = getConfig();
     const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
     const pairs = [];
@@ -1072,10 +1000,9 @@ function updateChemistryMatrix(matrix, changes) {
       for (let j = i + 1; j < 101; j++) {
         const value = matrix[i][j];
 
-        // Convert preset values to chemistry values using config thresholds
         let chemistry = null;
         if (value === thresholds.NEGATIVE_PRESET) chemistry = thresholds.NEGATIVE_MAX;
-        else if (value === thresholds.NEUTRAL_PRESET) chemistry = null; // Neutral - skip
+        else if (value === thresholds.NEUTRAL_PRESET) chemistry = null;
         else if (value === thresholds.POSITIVE_PRESET) chemistry = thresholds.POSITIVE_MIN;
 
         if (chemistry !== null) {
@@ -1088,7 +1015,6 @@ function updateChemistryMatrix(matrix, changes) {
       }
     }
 
-    // Write to Chemistry Lookup
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
 
@@ -1165,23 +1091,19 @@ function logChemistryChange(char1, char2, oldValue, newValue) {
     const sheetName = config.SHEETS.CHEMISTRY_CHANGE_LOG;
     let logSheet = ss.getSheetByName(sheetName);
 
-    // Create sheet if it doesn't exist
     if (!logSheet) {
       logSheet = ss.insertSheet(sheetName);
 
-      // Set up headers
       logSheet.getRange(1, 1, 1, 6).setValues([
         ['Timestamp', 'Character 1', 'Character 2', 'Old Value', 'New Value', 'Notes']
       ]);
 
-      // Format header row
       const headerRange = logSheet.getRange(1, 1, 1, 6);
       headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
       headerRange.setFontColor(config.COLORS.HEADER_TEXT);
       headerRange.setFontWeight('bold');
       headerRange.setHorizontalAlignment('center');
 
-      // Set column widths using config
       const logConfig = config.CHEMISTRY_CHANGE_LOG_CONFIG;
       logSheet.setColumnWidth(1, logConfig.COLUMN_WIDTHS.TIMESTAMP);
       logSheet.setColumnWidth(2, logConfig.COLUMN_WIDTHS.CHARACTER_1);
@@ -1193,7 +1115,6 @@ function logChemistryChange(char1, char2, oldValue, newValue) {
       logSheet.setFrozenRows(1);
     }
 
-    // Convert values to readable format using config thresholds
     const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
     const valueToText = function(val) {
       if (val === thresholds.NEGATIVE_PRESET) return 'Negative';
@@ -1202,7 +1123,6 @@ function logChemistryChange(char1, char2, oldValue, newValue) {
       return 'Unknown';
     };
 
-    // Add new row
     const timestamp = new Date();
     const newRow = [
       timestamp,
@@ -1210,19 +1130,15 @@ function logChemistryChange(char1, char2, oldValue, newValue) {
       char2,
       valueToText(oldValue),
       valueToText(newValue),
-      '' // Empty notes column for manual entry
+      ''
     ];
 
     logSheet.appendRow(newRow);
 
-    // Format the timestamp cell
     const lastRow = logSheet.getLastRow();
     logSheet.getRange(lastRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
-
-    // Add border to new row
     logSheet.getRange(lastRow, 1, 1, 6).setBorder(true, true, true, true, true, true);
 
-    // Color code based on change type using config colors
     const valueRange = logSheet.getRange(lastRow, 4, 1, 2);
     if (newValue === thresholds.POSITIVE_PRESET) {
       valueRange.setBackground(config.COLORS.POSITIVE_HIGHLIGHT);
@@ -1249,25 +1165,21 @@ function logChemistryChange(char1, char2, oldValue, newValue) {
 function writeToChemistryLookup(sheet, pairs) {
   const config = getConfig();
 
-  // Clear existing data (except header)
   if (sheet.getLastRow() > 1) {
     sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).clear();
   }
 
-  // Set up headers if they don't exist
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, 3).setValues([
       ['Player 1', 'Player 2', 'Chemistry']
     ]);
 
-    // Format header row using config
     const headerRange = sheet.getRange(1, 1, 1, 3);
     headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
     headerRange.setFontColor(config.COLORS.HEADER_TEXT);
     headerRange.setFontWeight('bold');
     headerRange.setHorizontalAlignment('center');
 
-    // Set column widths using config
     const chemConfig = config.CHEMISTRY_CONFIG;
     sheet.setColumnWidth(1, chemConfig.COLUMN_WIDTHS.PLAYER_1);
     sheet.setColumnWidth(2, chemConfig.COLUMN_WIDTHS.PLAYER_2);
@@ -1276,7 +1188,6 @@ function writeToChemistryLookup(sheet, pairs) {
     sheet.setFrozenRows(1);
   }
 
-  // Write pairs to sheet
   if (pairs.length > 0) {
     const data = pairs.map(p => [p.player1, p.player2, p.chemistry]);
     sheet.getRange(2, 1, pairs.length, 3).setValues(data);
