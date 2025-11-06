@@ -232,8 +232,7 @@ function parseFullStatsPreset(fileContent) {
     const config = getConfig();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // Create character name mapping sheet and load mappings into memory (ONCE)
-    const mappingSheet = createCharacterNameMappingSheet(ss);
+    const mappingSheet = createCharacterNameMappingSheet(ss, config);
     const nameMappings = loadCharacterNameMappings(mappingSheet);
 
     // ===== SECTION 1: CHEMISTRY (Lines 0-100) =====
