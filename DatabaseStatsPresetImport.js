@@ -284,7 +284,7 @@ function exportChemistryToStatsPreset() {
 function showChemistryEditor() {
   const html = HtmlService.createHtmlOutputFromFile('DatabaseChemistryEditor')
     .setWidth(1200)
-    .setHeight(800);
+    .setHeight(650);
   SpreadsheetApp.getUi().showModalDialog(html, 'Chemistry Matrix Editor');
 }
 
