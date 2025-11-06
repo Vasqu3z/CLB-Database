@@ -63,6 +63,145 @@ const STAR_PITCH_TYPES = ["None","Breaking Ball","Fastball","Change-Up"];
 const ARM_SIDES = ["Right","Left"];
 
 /**
+ * Generate custom character name from Python format
+ * Only converts characters that are actual variants (based on Python tool's comboList)
+ * Example: "Red Toad" → "Toad (Red)", but "Baby Mario" stays "Baby Mario"
+ * @param {string} pythonName - Name from Python tool
+ * @returns {string} Custom formatted name
+ */
+function generateCustomName(pythonName) {
+  // Define variant groups (from Python tool's comboList)
+  // Only these characters should be converted to variant format
+
+  const variantGroups = {
+    'Bro': ['Boomerang Bro', 'Fire Bro', 'Hammer Bro'],
+    'Dry Bones': ['Dark Bones', 'Blue Dry Bones', 'Gray Dry Bones', 'Green Dry Bones'],
+    'Koopa Paratroopa': ['Green Koopa Paratroopa', 'Red Koopa Paratroopa'],
+    'Koopa Troopa': ['Green Koopa Troopa', 'Red Koopa Troopa'],
+    'Kritter': ['Green Kritter', 'Blue Kritter', 'Red Kritter', 'Brown Kritter'],
+    'Magikoopa': ['Blue Magikoopa', 'Green Magikoopa', 'Red Magikoopa', 'Yellow Magikoopa'],
+    'Noki': ['Blue Noki', 'Red Noki', 'Green Noki'],
+    'Pianta': ['Blue Pianta', 'Red Pianta', 'Yellow Pianta'],
+    'Shy Guy': ['Blue Shy Guy', 'Gray Shy Guy', 'Green Shy Guy', 'Red Shy Guy', 'Yellow Shy Guy'],
+    'Toad': ['Blue Toad', 'Green Toad', 'Purple Toad', 'Red Toad', 'Yellow Toad'],
+    'Yoshi': ['Blue Yoshi', 'Light Blue Yoshi', 'Green Yoshi', 'Pink Yoshi', 'Red Yoshi', 'Yellow Yoshi']
+  };
+
+  // Check each variant group
+  for (const [baseName, variants] of Object.entries(variantGroups)) {
+    if (variants.includes(pythonName)) {
+      // Extract the color/variant prefix
+      const prefix = pythonName.substring(0, pythonName.length - baseName.length - 1);
+      return baseName + ' (' + prefix + ')';
+    }
+  }
+
+  // Handle Miis - they have a special format "Color Mii (Gender)"
+  if (pythonName.includes('Mii')) {
+    const miiMatch = pythonName.match(/^(.+) Mii \((M|F)\)$/);
+    if (miiMatch) {
+      const color = miiMatch[1];
+      const gender = miiMatch[2];
+      return 'Mii (' + color + ', ' + gender + ')';
+    }
+  }
+
+  // Not a variant - return original name unchanged
+  return pythonName;
+}
+
+/**
+ * Create or update Character Name Mapping sheet
+ * @param {Spreadsheet} ss - Active spreadsheet
+ */
+function createCharacterNameMappingSheet(ss) {
+  const sheetName = 'Character Name Mapping';
+  let mappingSheet = ss.getSheetByName(sheetName);
+
+  // Create sheet if it doesn't exist
+  if (!mappingSheet) {
+    mappingSheet = ss.insertSheet(sheetName);
+
+    // Set up headers
+    mappingSheet.getRange(1, 1, 1, 2).setValues([
+      ['Python Name', 'Custom Name']
+    ]);
+
+    // Format header row
+    const headerRange = mappingSheet.getRange(1, 1, 1, 2);
+    headerRange.setBackground('#667eea');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setFontWeight('bold');
+    headerRange.setHorizontalAlignment('center');
+
+    // Set column widths
+    mappingSheet.setColumnWidth(1, 200);
+    mappingSheet.setColumnWidth(2, 200);
+
+    // Freeze header row
+    mappingSheet.setFrozenRows(1);
+
+    // Populate with all 101 characters
+    const mappingData = [];
+    for (let i = 0; i < GAME_CHARACTER_ORDER.length; i++) {
+      const pythonName = GAME_CHARACTER_ORDER[i];
+      const customName = generateCustomName(pythonName);
+      mappingData.push([pythonName, customName]);
+    }
+
+    // Write all mappings at once
+    mappingSheet.getRange(2, 1, mappingData.length, 2).setValues(mappingData);
+
+    // Add note to column B header
+    mappingSheet.getRange(1, 2).setNote(
+      'Edit these names to match your custom naming convention.\n\n' +
+      'Pattern-based conversions applied for VARIANTS ONLY:\n' +
+      '• "Red Toad" → "Toad (Red)"\n' +
+      '• "Blue Yoshi" → "Yoshi (Blue)"\n' +
+      '• "Fire Bro" → "Bro (Fire)"\n' +
+      '• "Red Mii (M)" → "Mii (Red, M)"\n\n' +
+      'Non-variants (Baby Mario, Funky Kong, King Boo, etc.)\n' +
+      'are left unchanged.\n\n' +
+      'Review and adjust as needed!'
+    );
+  }
+
+  return mappingSheet;
+}
+
+/**
+ * Get custom character name from mapping sheet
+ * @param {Sheet} mappingSheet - Character Name Mapping sheet
+ * @param {string} pythonName - Python format name to look up
+ * @returns {string} Custom name, or Python name if not found
+ */
+function getCustomCharacterName(mappingSheet, pythonName) {
+  if (!mappingSheet) return pythonName;
+
+  try {
+    const lastRow = mappingSheet.getLastRow();
+    if (lastRow < 2) return pythonName;
+
+    // Read all mappings (skip header)
+    const data = mappingSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+
+    // Find matching Python name
+    for (let i = 0; i < data.length; i++) {
+      if (String(data[i][0]).trim() === pythonName) {
+        const customName = String(data[i][1]).trim();
+        return customName || pythonName; // Fall back to Python name if custom is empty
+      }
+    }
+
+    // Not found in mapping, return Python name
+    return pythonName;
+  } catch (e) {
+    // Error reading mapping, fall back to Python name
+    return pythonName;
+  }
+}
+
+/**
  * Show file upload dialog for importing stats preset
  */
 function importChemistryFromStatsPreset() {
@@ -146,6 +285,9 @@ function parseChemistrySection(chemistryLines, ss, config) {
     matrix.push(row);
   }
 
+  // Create or get character name mapping sheet
+  const mappingSheet = createCharacterNameMappingSheet(ss);
+
   // Convert to lookup pairs
   const pairs = [];
   let positiveCount = 0;
@@ -172,9 +314,11 @@ function parseChemistrySection(chemistryLines, ss, config) {
 
       // Only store non-neutral chemistry (negative or positive)
       if (chemistry !== null) {
+        const pythonName1 = GAME_CHARACTER_ORDER[i];
+        const pythonName2 = GAME_CHARACTER_ORDER[j];
         pairs.push({
-          player1: GAME_CHARACTER_ORDER[i],
-          player2: GAME_CHARACTER_ORDER[j],
+          player1: getCustomCharacterName(mappingSheet, pythonName1),
+          player2: getCustomCharacterName(mappingSheet, pythonName2),
           chemistry: chemistry
         });
       }
@@ -214,6 +358,9 @@ function parseStatsSection(statsLines, ss, config) {
     statsMatrix.push(row);
   }
 
+  // Create or get character name mapping sheet
+  const mappingSheet = createCharacterNameMappingSheet(ss);
+
   // Get or create Advanced Attributes sheet
   let attributesSheet = ss.getSheetByName(config.SHEETS.ATTRIBUTES);
 
@@ -244,7 +391,8 @@ function parseStatsSection(statsLines, ss, config) {
 
   for (let i = 0; i < 101; i++) {
     const presetRow = statsMatrix[i];
-    const characterName = GAME_CHARACTER_ORDER[i];
+    const pythonName = GAME_CHARACTER_ORDER[i];
+    const characterName = getCustomCharacterName(mappingSheet, pythonName);
 
     // Map preset indices to sheet columns
     const sheetRow = [
