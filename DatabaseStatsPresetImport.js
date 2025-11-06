@@ -368,9 +368,9 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
       'Slap Hit Power', 'Charge Hit Power', 'Speed', 'Bunting', 'Fielding', 'Throwing Speed',
       'Pre-Charge', 'Star Pitch', 'Fastball Speed', 'Curveball Speed', 'Curve', 'Stamina'
     ];
-    attributesSheet.getRange(1, 1, 1, 30).setValues([headers]);
+    attributesSheet.getRange(1, 1, 1, config.ATTRIBUTES_CONFIG.TOTAL_COLUMNS).setValues([headers]);
 
-    const headerRange = attributesSheet.getRange(1, 1, 1, 30);
+    const headerRange = attributesSheet.getRange(1, 1, 1, config.ATTRIBUTES_CONFIG.TOTAL_COLUMNS);
     headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
     headerRange.setFontColor(config.COLORS.HEADER_TEXT);
     headerRange.setFontWeight('bold');
@@ -378,18 +378,21 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     attributesSheet.setFrozenRows(1);
   }
 
-  // Read existing data to preserve custom columns
   const existingCustomData = {};
-  if (attributesSheet.getLastRow() >= 2) {
-    const existingData = attributesSheet.getRange(2, 1, attributesSheet.getLastRow() - 1, 30).getValues();
+  if (attributesSheet.getLastRow() >= config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW) {
+    const lastRow = attributesSheet.getLastRow();
+    const firstRow = config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW;
+    const totalCols = config.ATTRIBUTES_CONFIG.TOTAL_COLUMNS;
+    const existingData = attributesSheet.getRange(firstRow, 1, lastRow - firstRow + 1, totalCols).getValues();
 
+    const cols = config.ATTRIBUTES_CONFIG.COLUMNS;
     for (let i = 0; i < existingData.length; i++) {
-      const characterName = String(existingData[i][0]).trim();
+      const characterName = String(existingData[i][cols.NAME]).trim();
       if (characterName) {
         existingCustomData[characterName] = {
-          mii: existingData[i][3],           // Column D - MII
-          miiColor: existingData[i][4],      // Column E - MII_COLOR
-          preCharge: existingData[i][24]     // Column Y - PRE_CHARGE
+          mii: existingData[i][cols.MII],
+          miiColor: existingData[i][cols.MII_COLOR],
+          preCharge: existingData[i][cols.PRE_CHARGE]
         };
       }
     }
@@ -441,10 +444,15 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     sheetData.push(sheetRow);
   }
 
-  attributesSheet.getRange(2, 1, 101, 30).setValues(sheetData);
+  attributesSheet.getRange(
+    config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW,
+    1,
+    sheetData.length,
+    config.ATTRIBUTES_CONFIG.TOTAL_COLUMNS
+  ).setValues(sheetData);
 
   return {
-    charactersUpdated: 101
+    charactersUpdated: sheetData.length
   };
 }
 
