@@ -176,12 +176,12 @@
 </head>
 <body>
   <div class="container">
-    <h2>Import Chemistry from Stats Preset</h2>
+    <h2>Import Stats Preset</h2>
     <p class="subtitle">Upload a .txt stats preset file from the Mario Super Sluggers Stat Editor</p>
 
     <div class="warning">
       <strong>⚠️ Warning</strong>
-      This will replace all data in the Chemistry Lookup sheet. Any existing chemistry data will be overwritten.
+      This will replace all data in the Chemistry Lookup and Advanced Attributes sheets. Any existing data will be overwritten.
     </div>
 
     <div class="file-input-wrapper" id="fileDropZone">
@@ -252,7 +252,7 @@
     function importFile() {
       if (!selectedFile) return;
 
-      showStatus('loading', 'Importing chemistry data...');
+      showStatus('loading', 'Importing stats preset (chemistry, stats, trajectory)...');
       importBtn.disabled = true;
 
       const reader = new FileReader();
@@ -278,10 +278,14 @@
       if (result.success) {
         showStatus('success',
           `✅ Import successful!\n\n` +
-          `• Total pairs: ${result.totalPairs}\n` +
-          `• Positive chemistry: ${result.positiveCount}\n` +
-          `• Negative chemistry: ${result.negativeCount}\n\n` +
-          `Chemistry Lookup sheet updated. You can now close this dialog.`
+          `CHEMISTRY:\n` +
+          `• ${result.chemistry.positiveCount} positive pairs\n` +
+          `• ${result.chemistry.negativeCount} negative pairs\n\n` +
+          `STATS:\n` +
+          `• ${result.stats.charactersUpdated} characters updated\n\n` +
+          `TRAJECTORY:\n` +
+          `• ${result.trajectory.stored ? 'Stored successfully' : 'Not found'}\n\n` +
+          `All sheets updated. You can now close this dialog.`
         );
 
         // Auto-close after 3 seconds

@@ -45,9 +45,10 @@ function showAbout() {
     '  • Build and optimize lineups\n\n' +
     '🔧 Chemistry Tools:\n' +
     '  • Visual Chemistry Editor\n' +
-    '  • Import/Export stats presets (.txt)\n' +
+    '  • Import/Export full stats presets (228 lines)\n' +
+    '  • Chemistry + Stats + Trajectory\n' +
     '  • Compact relationship views\n' +
-    '  • Real-time chemistry updates\n' +
+    '  • Change logging for balance tracking\n' +
     '  • Negative/Neutral/Positive scale\n\n' +
     '🔐 Admin Version:\n' +
     '  • Includes league averages\n' +
