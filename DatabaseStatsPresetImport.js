@@ -113,30 +113,28 @@ function generateCustomName(pythonName) {
 /**
  * Create or update Character Name Mapping sheet
  * @param {Spreadsheet} ss - Active spreadsheet
+ * @param {Object} config - Configuration object
  */
-function createCharacterNameMappingSheet(ss) {
-  const sheetName = 'Character Name Mapping';
+function createCharacterNameMappingSheet(ss, config) {
+  const sheetName = config.SHEETS.CHARACTER_NAME_MAPPING;
   let mappingSheet = ss.getSheetByName(sheetName);
 
-  // Create sheet if it doesn't exist
   if (!mappingSheet) {
     mappingSheet = ss.insertSheet(sheetName);
 
-    // Set up headers
     mappingSheet.getRange(1, 1, 1, 2).setValues([
       ['Python Name', 'Custom Name']
     ]);
 
-    // Format header row
     const headerRange = mappingSheet.getRange(1, 1, 1, 2);
-    headerRange.setBackground('#667eea');
-    headerRange.setFontColor('#ffffff');
+    headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
+    headerRange.setFontColor(config.COLORS.HEADER_TEXT);
     headerRange.setFontWeight('bold');
     headerRange.setHorizontalAlignment('center');
 
-    // Set column widths
-    mappingSheet.setColumnWidth(1, 200);
-    mappingSheet.setColumnWidth(2, 200);
+    const mappingConfig = config.CHARACTER_NAME_MAPPING_CONFIG;
+    mappingSheet.setColumnWidth(1, mappingConfig.COLUMN_WIDTHS.PYTHON_NAME);
+    mappingSheet.setColumnWidth(2, mappingConfig.COLUMN_WIDTHS.CUSTOM_NAME);
 
     // Freeze header row
     mappingSheet.setFrozenRows(1);
@@ -212,39 +210,6 @@ function loadCharacterNameMappings(mappingSheet) {
  */
 function getCustomCharacterName(mappings, pythonName) {
   return mappings[pythonName] || pythonName;
-}
-
-/**
- * DEPRECATED: Old version that reads from sheet
- * Get custom character name from mapping sheet
- * @param {Sheet} mappingSheet - Character Name Mapping sheet
- * @param {string} pythonName - Python format name to look up
- * @returns {string} Custom name, or Python name if not found
- */
-function getCustomCharacterNameFromSheet(mappingSheet, pythonName) {
-  if (!mappingSheet) return pythonName;
-
-  try {
-    const lastRow = mappingSheet.getLastRow();
-    if (lastRow < 2) return pythonName;
-
-    // Read all mappings (skip header)
-    const data = mappingSheet.getRange(2, 1, lastRow - 1, 2).getValues();
-
-    // Find matching Python name
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === pythonName) {
-        const customName = String(data[i][1]).trim();
-        return customName || pythonName; // Fall back to Python name if custom is empty
-      }
-    }
-
-    // Not found in mapping, return Python name
-    return pythonName;
-  } catch (e) {
-    // Error reading mapping, fall back to Python name
-    return pythonName;
-  }
 }
 
 /**
@@ -344,18 +309,16 @@ function parseChemistrySection(chemistryLines, ss, config, nameMappings) {
     for (let j = i + 1; j < 101; j++) {
       const value = matrix[i][j];
 
-      // Convert 0/1/2 to chemistry values
-      // 0 = negative chemistry (-100)
-      // 1 = neutral chemistry (0) - don't store
-      // 2 = positive chemistry (+100)
+      // Convert preset values (0/1/2) to chemistry values using config thresholds
+      const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
       let chemistry = null;
-      if (value === 0) {
-        chemistry = -100;
+      if (value === thresholds.NEGATIVE_PRESET) {
+        chemistry = thresholds.NEGATIVE_MAX;
         negativeCount++;
-      } else if (value === 1) {
+      } else if (value === thresholds.NEUTRAL_PRESET) {
         chemistry = null; // Neutral - don't store
-      } else if (value === 2) {
-        chemistry = 100;
+      } else if (value === thresholds.POSITIVE_PRESET) {
+        chemistry = thresholds.POSITIVE_MIN;
         positiveCount++;
       }
 
@@ -423,8 +386,8 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
 
     // Format header row
     const headerRange = attributesSheet.getRange(1, 1, 1, 30);
-    headerRange.setBackground('#667eea');
-    headerRange.setFontColor('#ffffff');
+    headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
+    headerRange.setFontColor(config.COLORS.HEADER_TEXT);
     headerRange.setFontWeight('bold');
     headerRange.setHorizontalAlignment('center');
     attributesSheet.setFrozenRows(1);
@@ -559,12 +522,14 @@ function parseTrajectorySection(trajectoryLines, ss, config) {
  */
 function logImportEvent(stats) {
   try {
+    const config = getConfig();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let logSheet = ss.getSheetByName('Chemistry Change Log');
+    const sheetName = config.SHEETS.CHEMISTRY_CHANGE_LOG;
+    let logSheet = ss.getSheetByName(sheetName);
 
     // Create sheet if it doesn't exist
     if (!logSheet) {
-      logSheet = ss.insertSheet('Chemistry Change Log');
+      logSheet = ss.insertSheet(sheetName);
 
       // Set up headers
       logSheet.getRange(1, 1, 1, 6).setValues([
@@ -573,18 +538,19 @@ function logImportEvent(stats) {
 
       // Format header row
       const headerRange = logSheet.getRange(1, 1, 1, 6);
-      headerRange.setBackground('#667eea');
-      headerRange.setFontColor('#ffffff');
+      headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
+      headerRange.setFontColor(config.COLORS.HEADER_TEXT);
       headerRange.setFontWeight('bold');
       headerRange.setHorizontalAlignment('center');
 
-      // Set column widths
-      logSheet.setColumnWidth(1, 150);
-      logSheet.setColumnWidth(2, 150);
-      logSheet.setColumnWidth(3, 150);
-      logSheet.setColumnWidth(4, 100);
-      logSheet.setColumnWidth(5, 100);
-      logSheet.setColumnWidth(6, 300);
+      // Set column widths using config
+      const logConfig = config.CHEMISTRY_CHANGE_LOG_CONFIG;
+      logSheet.setColumnWidth(1, logConfig.COLUMN_WIDTHS.TIMESTAMP);
+      logSheet.setColumnWidth(2, logConfig.COLUMN_WIDTHS.CHARACTER_1);
+      logSheet.setColumnWidth(3, logConfig.COLUMN_WIDTHS.CHARACTER_2);
+      logSheet.setColumnWidth(4, logConfig.COLUMN_WIDTHS.OLD_VALUE);
+      logSheet.setColumnWidth(5, logConfig.COLUMN_WIDTHS.NEW_VALUE);
+      logSheet.setColumnWidth(6, logConfig.COLUMN_WIDTHS.NOTES);
 
       logSheet.setFrozenRows(1);
     }
@@ -609,8 +575,8 @@ function logImportEvent(stats) {
     // Add border to new row
     logSheet.getRange(lastRow, 1, 1, 6).setBorder(true, true, true, true, true, true);
 
-    // Highlight import event in blue
-    logSheet.getRange(lastRow, 1, 1, 6).setBackground('#cfe2ff');
+    // Highlight import event using config color
+    logSheet.getRange(lastRow, 1, 1, 6).setBackground(config.COLORS.IMPORT_EXPORT_HIGHLIGHT);
 
   } catch (e) {
     const config = getConfig();
@@ -764,6 +730,8 @@ function exportChemistrySection(ss, config) {
   if (lastRow > 1) {
     const data = lookupSheet.getRange(2, 1, lastRow - 1, 3).getValues();
 
+    const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
+
     data.forEach(([p1, p2, chemVal]) => {
       const player1 = String(p1).trim();
       const player2 = String(p2).trim();
@@ -773,13 +741,10 @@ function exportChemistrySection(ss, config) {
       const idx2 = nameToIndex[player2];
 
       if (idx1 !== undefined && idx2 !== undefined) {
-        // Convert chemistry values back to 0/1/2 format
-        // -100 or less = 0 (Negative)
-        // between -100 and 100 = 1 (Neutral)
-        // 100 or more = 2 (Positive)
-        let value = 1; // Default to neutral
-        if (chem <= -100) value = 0;      // Negative
-        else if (chem >= 100) value = 2;  // Positive
+        // Convert chemistry values back to preset format using config thresholds
+        let value = thresholds.NEUTRAL_PRESET; // Default to neutral
+        if (chem <= thresholds.NEGATIVE_MAX) value = thresholds.NEGATIVE_PRESET;
+        else if (chem >= thresholds.POSITIVE_MIN) value = thresholds.POSITIVE_PRESET;
 
         // Store in both directions (symmetric matrix)
         matrix[idx1][idx2] = value;
@@ -946,12 +911,14 @@ function exportTrajectorySection(ss, config) {
  */
 function logExportEvent(stats) {
   try {
+    const config = getConfig();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let logSheet = ss.getSheetByName('Chemistry Change Log');
+    const sheetName = config.SHEETS.CHEMISTRY_CHANGE_LOG;
+    let logSheet = ss.getSheetByName(sheetName);
 
     // Create sheet if it doesn't exist
     if (!logSheet) {
-      logSheet = ss.insertSheet('Chemistry Change Log');
+      logSheet = ss.insertSheet(sheetName);
 
       // Set up headers
       logSheet.getRange(1, 1, 1, 6).setValues([
@@ -960,18 +927,19 @@ function logExportEvent(stats) {
 
       // Format header row
       const headerRange = logSheet.getRange(1, 1, 1, 6);
-      headerRange.setBackground('#667eea');
-      headerRange.setFontColor('#ffffff');
+      headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
+      headerRange.setFontColor(config.COLORS.HEADER_TEXT);
       headerRange.setFontWeight('bold');
       headerRange.setHorizontalAlignment('center');
 
-      // Set column widths
-      logSheet.setColumnWidth(1, 150);
-      logSheet.setColumnWidth(2, 150);
-      logSheet.setColumnWidth(3, 150);
-      logSheet.setColumnWidth(4, 100);
-      logSheet.setColumnWidth(5, 100);
-      logSheet.setColumnWidth(6, 300);
+      // Set column widths using config
+      const logConfig = config.CHEMISTRY_CHANGE_LOG_CONFIG;
+      logSheet.setColumnWidth(1, logConfig.COLUMN_WIDTHS.TIMESTAMP);
+      logSheet.setColumnWidth(2, logConfig.COLUMN_WIDTHS.CHARACTER_1);
+      logSheet.setColumnWidth(3, logConfig.COLUMN_WIDTHS.CHARACTER_2);
+      logSheet.setColumnWidth(4, logConfig.COLUMN_WIDTHS.OLD_VALUE);
+      logSheet.setColumnWidth(5, logConfig.COLUMN_WIDTHS.NEW_VALUE);
+      logSheet.setColumnWidth(6, logConfig.COLUMN_WIDTHS.NOTES);
 
       logSheet.setFrozenRows(1);
     }
@@ -996,8 +964,8 @@ function logExportEvent(stats) {
     // Add border to new row
     logSheet.getRange(lastRow, 1, 1, 6).setBorder(true, true, true, true, true, true);
 
-    // Highlight export event in green
-    logSheet.getRange(lastRow, 1, 1, 6).setBackground('#d4edda');
+    // Highlight export event using config color
+    logSheet.getRange(lastRow, 1, 1, 6).setBackground(config.COLORS.POSITIVE_HIGHLIGHT);
 
   } catch (e) {
     const config = getConfig();
@@ -1040,6 +1008,7 @@ function getChemistryMatrix() {
     // Read Chemistry Lookup
     if (lookupSheet && lookupSheet.getLastRow() > 1) {
       const data = lookupSheet.getRange(2, 1, lookupSheet.getLastRow() - 1, 3).getValues();
+      const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
 
       data.forEach(([p1, p2, chemVal]) => {
         const player1 = String(p1).trim();
@@ -1050,13 +1019,10 @@ function getChemistryMatrix() {
         const idx2 = nameToIndex[player2];
 
         if (idx1 !== undefined && idx2 !== undefined) {
-          // Convert to 0/1/2 format
-          // -100 or less = 0 (Negative)
-          // between -100 and 100 = 1 (Neutral)
-          // 100 or more = 2 (Positive)
-          let value = 1; // Default to neutral
-          if (chem <= -100) value = 0;      // Negative
-          else if (chem >= 100) value = 2;  // Positive
+          // Convert to preset format using config thresholds
+          let value = thresholds.NEUTRAL_PRESET; // Default to neutral
+          if (chem <= thresholds.NEGATIVE_MAX) value = thresholds.NEGATIVE_PRESET;
+          else if (chem >= thresholds.POSITIVE_MIN) value = thresholds.POSITIVE_PRESET;
 
           matrix[idx1][idx2] = value;
           matrix[idx2][idx1] = value;
@@ -1098,20 +1064,19 @@ function updateChemistryMatrix(matrix, changes) {
     }
 
     // Convert matrix to pairs
+    const config = getConfig();
+    const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
     const pairs = [];
 
     for (let i = 0; i < 101; i++) {
       for (let j = i + 1; j < 101; j++) {
         const value = matrix[i][j];
 
-        // Convert 0/1/2 to chemistry values
-        // 0 = negative (-100)
-        // 1 = neutral (0) - don't store
-        // 2 = positive (+100)
+        // Convert preset values to chemistry values using config thresholds
         let chemistry = null;
-        if (value === 0) chemistry = -100;      // Negative
-        else if (value === 1) chemistry = null; // Neutral - skip
-        else if (value === 2) chemistry = 100;  // Positive
+        if (value === thresholds.NEGATIVE_PRESET) chemistry = thresholds.NEGATIVE_MAX;
+        else if (value === thresholds.NEUTRAL_PRESET) chemistry = null; // Neutral - skip
+        else if (value === thresholds.POSITIVE_PRESET) chemistry = thresholds.POSITIVE_MIN;
 
         if (chemistry !== null) {
           pairs.push({
@@ -1124,7 +1089,6 @@ function updateChemistryMatrix(matrix, changes) {
     }
 
     // Write to Chemistry Lookup
-    const config = getConfig();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
 
@@ -1196,42 +1160,45 @@ function getCharacterChemistry(characterName) {
  */
 function logChemistryChange(char1, char2, oldValue, newValue) {
   try {
+    const config = getConfig();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let logSheet = ss.getSheetByName('Chemistry Change Log');
+    const sheetName = config.SHEETS.CHEMISTRY_CHANGE_LOG;
+    let logSheet = ss.getSheetByName(sheetName);
 
     // Create sheet if it doesn't exist
     if (!logSheet) {
-      logSheet = ss.insertSheet('Chemistry Change Log');
+      logSheet = ss.insertSheet(sheetName);
 
       // Set up headers
-      logSheet.getRange(1, 1, 1, 5).setValues([
+      logSheet.getRange(1, 1, 1, 6).setValues([
         ['Timestamp', 'Character 1', 'Character 2', 'Old Value', 'New Value', 'Notes']
       ]);
 
       // Format header row
       const headerRange = logSheet.getRange(1, 1, 1, 6);
-      headerRange.setBackground('#667eea');
-      headerRange.setFontColor('#ffffff');
+      headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
+      headerRange.setFontColor(config.COLORS.HEADER_TEXT);
       headerRange.setFontWeight('bold');
       headerRange.setHorizontalAlignment('center');
 
-      // Set column widths
-      logSheet.setColumnWidth(1, 150); // Timestamp
-      logSheet.setColumnWidth(2, 150); // Character 1
-      logSheet.setColumnWidth(3, 150); // Character 2
-      logSheet.setColumnWidth(4, 100); // Old Value
-      logSheet.setColumnWidth(5, 100); // New Value
-      logSheet.setColumnWidth(6, 300); // Notes
+      // Set column widths using config
+      const logConfig = config.CHEMISTRY_CHANGE_LOG_CONFIG;
+      logSheet.setColumnWidth(1, logConfig.COLUMN_WIDTHS.TIMESTAMP);
+      logSheet.setColumnWidth(2, logConfig.COLUMN_WIDTHS.CHARACTER_1);
+      logSheet.setColumnWidth(3, logConfig.COLUMN_WIDTHS.CHARACTER_2);
+      logSheet.setColumnWidth(4, logConfig.COLUMN_WIDTHS.OLD_VALUE);
+      logSheet.setColumnWidth(5, logConfig.COLUMN_WIDTHS.NEW_VALUE);
+      logSheet.setColumnWidth(6, logConfig.COLUMN_WIDTHS.NOTES);
 
-      // Freeze header row
       logSheet.setFrozenRows(1);
     }
 
-    // Convert values to readable format
+    // Convert values to readable format using config thresholds
+    const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
     const valueToText = function(val) {
-      if (val === 0) return 'Negative';
-      if (val === 1) return 'Neutral';
-      if (val === 2) return 'Positive';
+      if (val === thresholds.NEGATIVE_PRESET) return 'Negative';
+      if (val === thresholds.NEUTRAL_PRESET) return 'Neutral';
+      if (val === thresholds.POSITIVE_PRESET) return 'Positive';
       return 'Unknown';
     };
 
@@ -1255,17 +1222,14 @@ function logChemistryChange(char1, char2, oldValue, newValue) {
     // Add border to new row
     logSheet.getRange(lastRow, 1, 1, 6).setBorder(true, true, true, true, true, true);
 
-    // Color code based on change type
+    // Color code based on change type using config colors
     const valueRange = logSheet.getRange(lastRow, 4, 1, 2);
-    if (newValue === 2) {
-      // Changed to positive - green highlight
-      valueRange.setBackground('#d4edda');
-    } else if (newValue === 0) {
-      // Changed to negative - red highlight
-      valueRange.setBackground('#f8d7da');
+    if (newValue === thresholds.POSITIVE_PRESET) {
+      valueRange.setBackground(config.COLORS.POSITIVE_HIGHLIGHT);
+    } else if (newValue === thresholds.NEGATIVE_PRESET) {
+      valueRange.setBackground(config.COLORS.NEGATIVE_HIGHLIGHT);
     } else {
-      // Changed to neutral - gray highlight
-      valueRange.setBackground('#e2e3e5');
+      valueRange.setBackground(config.COLORS.NEUTRAL_HIGHLIGHT);
     }
 
   } catch (e) {
@@ -1283,6 +1247,8 @@ function logChemistryChange(char1, char2, oldValue, newValue) {
  * @param {Array<Object>} pairs - Array of {player1, player2, chemistry} objects
  */
 function writeToChemistryLookup(sheet, pairs) {
+  const config = getConfig();
+
   // Clear existing data (except header)
   if (sheet.getLastRow() > 1) {
     sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).clear();
@@ -1294,19 +1260,19 @@ function writeToChemistryLookup(sheet, pairs) {
       ['Player 1', 'Player 2', 'Chemistry']
     ]);
 
-    // Format header row
+    // Format header row using config
     const headerRange = sheet.getRange(1, 1, 1, 3);
-    headerRange.setBackground('#667eea');
-    headerRange.setFontColor('#ffffff');
+    headerRange.setBackground(config.COLORS.HEADER_BACKGROUND);
+    headerRange.setFontColor(config.COLORS.HEADER_TEXT);
     headerRange.setFontWeight('bold');
     headerRange.setHorizontalAlignment('center');
 
-    // Set column widths
-    sheet.setColumnWidth(1, 150);
-    sheet.setColumnWidth(2, 150);
-    sheet.setColumnWidth(3, 100);
+    // Set column widths using config
+    const chemConfig = config.CHEMISTRY_CONFIG;
+    sheet.setColumnWidth(1, chemConfig.COLUMN_WIDTHS.PLAYER_1);
+    sheet.setColumnWidth(2, chemConfig.COLUMN_WIDTHS.PLAYER_2);
+    sheet.setColumnWidth(3, chemConfig.COLUMN_WIDTHS.CHEMISTRY_VALUE);
 
-    // Freeze header row
     sheet.setFrozenRows(1);
   }
 

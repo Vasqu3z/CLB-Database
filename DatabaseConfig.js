@@ -9,7 +9,9 @@ var CONFIG = {
     ATTRIBUTES: 'Advanced Attributes',
     CHEMISTRY: 'Player Chemistry Matrix',
     MII_COLOR_CHEMISTRY: 'Mii Chemistry Matrix',
-    CHEMISTRY_LOOKUP: 'Chemistry Lookup'
+    CHEMISTRY_LOOKUP: 'Chemistry Lookup',
+    CHARACTER_NAME_MAPPING: 'Character Name Mapping',
+    CHEMISTRY_CHANGE_LOG: 'Chemistry Change Log'
   },
   
   // Attribute Sheet Configuration
@@ -67,8 +69,62 @@ var CONFIG = {
     // Chemistry value thresholds
     THRESHOLDS: {
       POSITIVE_MIN: 100,    // Values >= 100 are positive chemistry
-      NEGATIVE_MAX: -100    // Values <= -100 are negative chemistry
+      NEGATIVE_MAX: -100,   // Values <= -100 are negative chemistry
+      POSITIVE_PRESET: 2,   // Preset file value for positive chemistry
+      NEUTRAL_PRESET: 1,    // Preset file value for neutral chemistry
+      NEGATIVE_PRESET: 0    // Preset file value for negative chemistry
+    },
+
+    // Column widths for Chemistry Lookup sheet
+    COLUMN_WIDTHS: {
+      PLAYER_1: 150,
+      PLAYER_2: 150,
+      CHEMISTRY_VALUE: 100
     }
+  },
+
+  // Character Name Mapping Configuration
+  CHARACTER_NAME_MAPPING_CONFIG: {
+    COLUMNS: {
+      PYTHON_NAME: 0,       // Column A (1) - Python tool name
+      CUSTOM_NAME: 1        // Column B (2) - Custom formatted name
+    },
+    FIRST_DATA_ROW: 2,
+    COLUMN_WIDTHS: {
+      PYTHON_NAME: 200,
+      CUSTOM_NAME: 200
+    }
+  },
+
+  // Chemistry Change Log Configuration
+  CHEMISTRY_CHANGE_LOG_CONFIG: {
+    COLUMNS: {
+      TIMESTAMP: 0,         // Column A (1)
+      CHARACTER_1: 1,       // Column B (2)
+      CHARACTER_2: 2,       // Column C (3)
+      OLD_VALUE: 3,         // Column D (4)
+      NEW_VALUE: 4,         // Column E (5)
+      NOTES: 5              // Column F (6)
+    },
+    FIRST_DATA_ROW: 2,
+    COLUMN_WIDTHS: {
+      TIMESTAMP: 150,
+      CHARACTER_1: 150,
+      CHARACTER_2: 150,
+      OLD_VALUE: 100,
+      NEW_VALUE: 100,
+      NOTES: 300
+    }
+  },
+
+  // UI Formatting Colors
+  COLORS: {
+    HEADER_BACKGROUND: '#667eea',
+    HEADER_TEXT: '#ffffff',
+    POSITIVE_HIGHLIGHT: '#d4edda',
+    NEGATIVE_HIGHLIGHT: '#f8d7da',
+    NEUTRAL_HIGHLIGHT: '#e2e3e5',
+    IMPORT_EXPORT_HIGHLIGHT: '#cfe2ff'
   },
 
   // Debug Configuration
