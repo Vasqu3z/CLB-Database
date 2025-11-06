@@ -19,16 +19,7 @@ function onOpen() {
       .addItem('📥 Import from Stats Preset', 'importChemistryFromStatsPreset')
       .addItem('📤 Export to Stats Preset', 'exportChemistryToStatsPreset')
       .addSeparator()
-      .addItem('🔄 Convert Matrix to Lookup (with Variants)', 'convertChemistryMatrixToLookupWithVariants')
-      .addSeparator()
-      .addSubMenu(ui.createMenu('✏️ Bulk Operations')
-        .addItem('➕ Bulk Add Chemistry', 'bulkAddChemistry')
-        .addItem('✏️ Bulk Edit Chemistry', 'bulkEditChemistry')
-        .addItem('🗑️ Bulk Remove Chemistry', 'bulkRemoveChemistry'))
-      .addSeparator()
-      .addItem('📊 Update Chemistry JSON Only', 'updateChemistryDataJSON')
-      .addItem('🔍 Check Bidirectional Chemistry', 'showBidirectionalReport')
-      .addSeparator()
+      .addItem('📊 Update Chemistry JSON Cache', 'updateChemistryDataJSON')
       .addItem('🧹 Clear JSON Cache', 'clearChemistryCache'))
     .addSeparator()
     .addItem('📋 About', 'showAbout')
@@ -53,11 +44,11 @@ function showAbout() {
     '  • Visual chemistry connections\n' +
     '  • Build and optimize lineups\n\n' +
     '🔧 Chemistry Tools:\n' +
-    '  • Visual Chemistry Editor (new!)\n' +
-    '  • Import/Export stats presets\n' +
-    '  • Bulk add/edit/remove chemistry\n' +
-    '  • Automatic variant expansion\n' +
-    '  • Bidirectional validation\n\n' +
+    '  • Visual Chemistry Editor\n' +
+    '  • Import/Export stats presets (.txt)\n' +
+    '  • Compact relationship views\n' +
+    '  • Real-time chemistry updates\n' +
+    '  • Negative/Neutral/Positive scale\n\n' +
     '🔐 Admin Version:\n' +
     '  • Includes league averages\n' +
     '  • Balance characters efficiently\n' +

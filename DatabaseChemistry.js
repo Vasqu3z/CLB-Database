@@ -235,3 +235,58 @@ function calculateTeamAnalysis(playerNames, chemistryMatrix, thresholds) {
     mixed: mixed
   };
 }
+
+/**
+ * Update JSON cache and sync freshness for LineupBuilder
+ * Reads Chemistry Lookup sheet and stores as JSON in script properties
+ */
+function updateChemistryDataJSON() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
+  if (!lookupSheet) throw new Error('Chemistry Lookup sheet not found');
+  const lastRow = lookupSheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const data = lookupSheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  const playerSet = {};
+  const pairs = [];
+
+  data.forEach(([p1r, p2r, chemVal]) => {
+    const p1 = String(p1r).trim();
+    const p2 = String(p2r).trim();
+    const chem = Math.round(chemVal);
+    if (!p1 || !p2) return;
+    playerSet[p1] = true;
+    playerSet[p2] = true;
+    pairs.push({ p1, p2, v: chem });
+  });
+
+  const players = Object.keys(playerSet).sort();
+  const jsonData = {
+    players,
+    pairs,
+    thresholds: {
+      positive: config.CHEMISTRY_CONFIG.THRESHOLDS.POSITIVE_MIN,
+      negative: config.CHEMISTRY_CONFIG.THRESHOLDS.NEGATIVE_MAX
+    },
+    timestamp: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  };
+
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('CHEMISTRY_DATA', JSON.stringify(jsonData));
+  props.setProperty('CHEMISTRY_DATA_TIMESTAMP', jsonData.timestamp);
+
+  // --- Freshness sync for LineupBuilder ---
+  let checksum = 0;
+  data.forEach(([p1, p2, v]) => {
+    const s = (String(p1) + String(p2));
+    for (let i = 0; i < s.length; i++) checksum += s.charCodeAt(i);
+    checksum += Number(v);
+  });
+
+  props.setProperty('CHEMISTRY_LOOKUP_TIMESTAMP', jsonData.timestamp);
+  props.setProperty('CHEMISTRY_LOOKUP_ROWCOUNT', lastRow);
+  props.setProperty('CHEMISTRY_LOOKUP_CHECKSUM', checksum);
+}
