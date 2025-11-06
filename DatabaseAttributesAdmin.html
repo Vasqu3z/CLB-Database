@@ -249,6 +249,7 @@
   </div>
 
   <script>
+    // ===== INITIALIZATION =====
     window.onload = function() {
       google.script.run
         .withSuccessHandler(populatePlayerDropdowns)
@@ -270,7 +271,9 @@
         });
       });
     }
-    
+
+    // ===== CORE LOGIC & RENDERING =====
+
     function comparePlayers() {
       var player1 = document.getElementById('player1').value;
       var player2 = document.getElementById('player2').value;

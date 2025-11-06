@@ -1,6 +1,7 @@
-// ===== LINEUP BUILDER TOOL (OPTIMIZED WITH JSON) =====
-// Interactive baseball field with chemistry visualization
-// Ultra-fast loading using JSON from ScriptProperties
+// ===== LINEUP BUILDER =====
+// Purpose: Interactive baseball field with chemistry visualization and lineup management
+// Dependencies: DatabaseConfig.js
+// Entry Point(s): getLineupChemistryDataFromJSON(), calculateTeamChemistry(), saveLineup(), showLineupBuilder()
 
 function showLineupBuilder() {
   var html = HtmlService.createHtmlOutputFromFile('DatabaseLineupApp')
@@ -43,7 +44,10 @@ function getLineupChemistryDataFromJSON() {
       lastModified: data.lastModified
     };
   } catch (e) {
-    Logger.log('Error reading JSON: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error reading JSON: ' + e.toString());
+    }
     return getChemistryLookupData();
   }
 }
@@ -52,25 +56,25 @@ function getChemistryLookupData() {
   var config = getConfig();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
-  
+
   if (!lookupSheet) {
     throw new Error(config.SHEETS.CHEMISTRY_LOOKUP + ' sheet not found.');
   }
-  
+
   var lastRow = lookupSheet.getLastRow();
-  
+
   if (lastRow < 2) {
     throw new Error('Chemistry Lookup sheet is empty.');
   }
-  
+
   var lookupData = lookupSheet.getRange(2, 1, lastRow - 1, 3).getValues();
   var chemistryMatrix = {};
   var playerSet = {};
-  
+
   for (var i = 0; i < lookupData.length; i++) {
-    var player1 = String(lookupData[i][0]).trim();
-    var player2 = String(lookupData[i][1]).trim();
-    var chemValue = lookupData[i][2];
+    var player1 = String(lookupData[i][config.CHEMISTRY_CONFIG.COLUMNS.PLAYER_1]).trim();
+    var player2 = String(lookupData[i][config.CHEMISTRY_CONFIG.COLUMNS.PLAYER_2]).trim();
+    var chemValue = lookupData[i][config.CHEMISTRY_CONFIG.COLUMNS.CHEMISTRY_VALUE];
     
     if (!player1 || !player2) continue;
     
@@ -101,7 +105,10 @@ function getLineupCharacterList() {
     if (!data) return [];
     return data.players;
   } catch (e) {
-    Logger.log('Error in getLineupCharacterList: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getLineupCharacterList: ' + e.toString());
+    }
     throw e;
   }
 }
@@ -110,7 +117,10 @@ function getLineupChemistryData() {
   try {
     return getLineupChemistryDataFromJSON();
   } catch (e) {
-    Logger.log('Error in getLineupChemistryData: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getLineupChemistryData: ' + e.toString());
+    }
     throw e;
   }
 }
@@ -171,7 +181,10 @@ function calculateTeamChemistry(playerNames) {
       pairs: pairs
     };
   } catch (e) {
-    Logger.log('Error in calculateTeamChemistry: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in calculateTeamChemistry: ' + e.toString());
+    }
     throw e;
   }
 }
@@ -250,11 +263,11 @@ function checkIfChemistryDataNeedsUpdate() {
       if (lastRow > 1) {
         var lookupData = lookupSheet.getRange(2, 1, lastRow - 1, 3).getValues();
         var currentChecksum = 0;
-        
+
         for (var i = 0; i < lookupData.length; i++) {
-          var player1 = String(lookupData[i][0]).trim();
-          var player2 = String(lookupData[i][1]).trim();
-          var chemValue = Number(lookupData[i][2]);
+          var player1 = String(lookupData[i][config.CHEMISTRY_CONFIG.COLUMNS.PLAYER_1]).trim();
+          var player2 = String(lookupData[i][config.CHEMISTRY_CONFIG.COLUMNS.PLAYER_2]).trim();
+          var chemValue = Number(lookupData[i][config.CHEMISTRY_CONFIG.COLUMNS.CHEMISTRY_VALUE]);
           
           for (var j = 0; j < player1.length; j++) {
             currentChecksum += player1.charCodeAt(j);
@@ -276,7 +289,10 @@ function checkIfChemistryDataNeedsUpdate() {
     
     return { needsUpdate: false };
   } catch (e) {
-    Logger.log('Error checking freshness: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error checking freshness: ' + e.toString());
+    }
     return { needsUpdate: false, reason: '' };
   }
 }

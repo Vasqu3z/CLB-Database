@@ -2,32 +2,43 @@
 // Handles routing for multiple web apps in one project
 
 function doGet(e) {
+  var config = getConfig();
   var page = e.parameter.page || 'landing';
-  
-  Logger.log('Web app accessed with page parameter: ' + page);
-  
+
+  if (config.DEBUG.ENABLE_LOGGING) {
+    Logger.log('Web app accessed with page parameter: ' + page);
+  }
+
   switch(page) {
     case 'lineup':
-      Logger.log('Returning LineupBuilder');
+      if (config.DEBUG.ENABLE_LOGGING) {
+        Logger.log('Returning LineupBuilder');
+      }
       return HtmlService.createHtmlOutputFromFile('LineupBuilder')
         .setTitle('Lineup Builder')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-      
+
     case 'chemistry':
-      Logger.log('Returning PlayerChemistry');
+      if (config.DEBUG.ENABLE_LOGGING) {
+        Logger.log('Returning PlayerChemistry');
+      }
       return HtmlService.createHtmlOutputFromFile('PlayerChemistry')
         .setTitle('Player Chemistry Comparison')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-      
+
     case 'attributes':
-      Logger.log('Returning AttributeComparison');
+      if (config.DEBUG.ENABLE_LOGGING) {
+        Logger.log('Returning AttributeComparison');
+      }
       return HtmlService.createHtmlOutputFromFile('AttributeComparison')
         .setTitle('Attribute Comparison')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-      
+
     case 'landing':
     default:
-      Logger.log('Returning landing page');
+      if (config.DEBUG.ENABLE_LOGGING) {
+        Logger.log('Returning landing page');
+      }
       return createLandingPage();
 }
 }

@@ -24,7 +24,10 @@ function getPlayerList() {
     var data = JSON.parse(dataJson);
     return data.players || [];
   } catch (e) {
-    Logger.log('Error in getPlayerList: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getPlayerList: ' + e.toString());
+    }
     throw e;
   }
 }
@@ -108,9 +111,12 @@ function getMultiplePlayerChemistry(playerNames) {
       players: results,
       teamAnalysis: teamAnalysis
     };
-    
+
   } catch (e) {
-    Logger.log('Error in getMultiplePlayerChemistry: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getMultiplePlayerChemistry: ' + e.toString());
+    }
     throw e;
   }
 }
