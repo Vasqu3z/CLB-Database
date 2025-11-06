@@ -170,12 +170,58 @@ function createCharacterNameMappingSheet(ss) {
 }
 
 /**
+ * Load all character name mappings into memory for fast lookups
+ * @param {Sheet} mappingSheet - Character Name Mapping sheet
+ * @returns {Object} Map of Python name → Custom name
+ */
+function loadCharacterNameMappings(mappingSheet) {
+  const mappings = {};
+
+  if (!mappingSheet) {
+    // No mapping sheet, return empty map
+    return mappings;
+  }
+
+  try {
+    const lastRow = mappingSheet.getLastRow();
+    if (lastRow < 2) return mappings;
+
+    // Read all mappings at once (skip header)
+    const data = mappingSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+
+    // Build lookup map
+    for (let i = 0; i < data.length; i++) {
+      const pythonName = String(data[i][0]).trim();
+      const customName = String(data[i][1]).trim();
+      if (pythonName && customName) {
+        mappings[pythonName] = customName;
+      }
+    }
+  } catch (e) {
+    // Error reading mappings, return empty map
+  }
+
+  return mappings;
+}
+
+/**
+ * Get custom character name from pre-loaded mapping
+ * @param {Object} mappings - Pre-loaded name mappings
+ * @param {string} pythonName - Python format name to look up
+ * @returns {string} Custom name, or Python name if not found
+ */
+function getCustomCharacterName(mappings, pythonName) {
+  return mappings[pythonName] || pythonName;
+}
+
+/**
+ * DEPRECATED: Old version that reads from sheet
  * Get custom character name from mapping sheet
  * @param {Sheet} mappingSheet - Character Name Mapping sheet
  * @param {string} pythonName - Python format name to look up
  * @returns {string} Custom name, or Python name if not found
  */
-function getCustomCharacterName(mappingSheet, pythonName) {
+function getCustomCharacterNameFromSheet(mappingSheet, pythonName) {
   if (!mappingSheet) return pythonName;
 
   try {
@@ -228,11 +274,15 @@ function parseFullStatsPreset(fileContent) {
     const config = getConfig();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    // Create character name mapping sheet and load mappings into memory (ONCE)
+    const mappingSheet = createCharacterNameMappingSheet(ss);
+    const nameMappings = loadCharacterNameMappings(mappingSheet);
+
     // ===== SECTION 1: CHEMISTRY (Lines 0-100) =====
-    const chemistryResult = parseChemistrySection(lines.slice(0, 101), ss, config);
+    const chemistryResult = parseChemistrySection(lines.slice(0, 101), ss, config, nameMappings);
 
     // ===== SECTION 2: STATS (Lines 101-201) =====
-    const statsResult = parseStatsSection(lines.slice(101, 202), ss, config);
+    const statsResult = parseStatsSection(lines.slice(101, 202), ss, config, nameMappings);
 
     // ===== SECTION 3: TRAJECTORY (Lines 202-227) =====
     const trajectoryResult = parseTrajectorySection(lines.slice(202, 228), ss, config);
@@ -266,7 +316,7 @@ function parseFullStatsPreset(fileContent) {
 /**
  * Parse chemistry section (lines 0-100, 101x101 matrix)
  */
-function parseChemistrySection(chemistryLines, ss, config) {
+function parseChemistrySection(chemistryLines, ss, config, nameMappings) {
   // Parse matrix
   const matrix = [];
   for (let i = 0; i < 101; i++) {
@@ -284,9 +334,6 @@ function parseChemistrySection(chemistryLines, ss, config) {
 
     matrix.push(row);
   }
-
-  // Create or get character name mapping sheet
-  const mappingSheet = createCharacterNameMappingSheet(ss);
 
   // Convert to lookup pairs
   const pairs = [];
@@ -317,8 +364,8 @@ function parseChemistrySection(chemistryLines, ss, config) {
         const pythonName1 = GAME_CHARACTER_ORDER[i];
         const pythonName2 = GAME_CHARACTER_ORDER[j];
         pairs.push({
-          player1: getCustomCharacterName(mappingSheet, pythonName1),
-          player2: getCustomCharacterName(mappingSheet, pythonName2),
+          player1: getCustomCharacterName(nameMappings, pythonName1),
+          player2: getCustomCharacterName(nameMappings, pythonName2),
           chemistry: chemistry
         });
       }
@@ -345,7 +392,7 @@ function parseChemistrySection(chemistryLines, ss, config) {
 /**
  * Parse stats section (lines 101-201, 101x30 matrix)
  */
-function parseStatsSection(statsLines, ss, config) {
+function parseStatsSection(statsLines, ss, config, nameMappings) {
   // Parse stats matrix
   const statsMatrix = [];
   for (let i = 0; i < 101; i++) {
@@ -357,9 +404,6 @@ function parseStatsSection(statsLines, ss, config) {
 
     statsMatrix.push(row);
   }
-
-  // Create or get character name mapping sheet
-  const mappingSheet = createCharacterNameMappingSheet(ss);
 
   // Get or create Advanced Attributes sheet
   let attributesSheet = ss.getSheetByName(config.SHEETS.ATTRIBUTES);
@@ -392,7 +436,7 @@ function parseStatsSection(statsLines, ss, config) {
   for (let i = 0; i < 101; i++) {
     const presetRow = statsMatrix[i];
     const pythonName = GAME_CHARACTER_ORDER[i];
-    const characterName = getCustomCharacterName(mappingSheet, pythonName);
+    const characterName = getCustomCharacterName(nameMappings, pythonName);
 
     // Map preset indices to sheet columns
     const sheetRow = [
