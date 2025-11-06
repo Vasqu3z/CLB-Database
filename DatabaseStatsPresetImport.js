@@ -378,6 +378,23 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     attributesSheet.setFrozenRows(1);
   }
 
+  // Read existing data to preserve custom columns
+  const existingCustomData = {};
+  if (attributesSheet.getLastRow() >= 2) {
+    const existingData = attributesSheet.getRange(2, 1, attributesSheet.getLastRow() - 1, 30).getValues();
+
+    for (let i = 0; i < existingData.length; i++) {
+      const characterName = String(existingData[i][0]).trim();
+      if (characterName) {
+        existingCustomData[characterName] = {
+          mii: existingData[i][3],           // Column D - MII
+          miiColor: existingData[i][4],      // Column E - MII_COLOR
+          preCharge: existingData[i][24]     // Column Y - PRE_CHARGE
+        };
+      }
+    }
+  }
+
   const sheetData = [];
 
   for (let i = 0; i < 101; i++) {
@@ -385,12 +402,15 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     const pythonName = GAME_CHARACTER_ORDER[i];
     const characterName = getCustomCharacterName(nameMappings, pythonName);
 
+    // Get existing custom data for this character, or use empty defaults
+    const customData = existingCustomData[characterName] || { mii: '', miiColor: '', preCharge: '' };
+
     const sheetRow = [
       characterName,                                  // Column A - NAME
       CHARACTER_CLASSES[presetRow[2]] || '',         // Column B - CHARACTER_CLASS (preset index 2)
       presetRow[5] === 1 ? 'Yes' : 'No',            // Column C - CAPTAIN (preset index 5)
-      '',                                            // Column D - MII (custom field, leave empty)
-      '',                                            // Column E - MII_COLOR (custom field, leave empty)
+      customData.mii,                                // Column D - MII (preserve existing)
+      customData.miiColor,                           // Column E - MII_COLOR (preserve existing)
       ARM_SIDES[presetRow[0]] || '',                // Column F - ARM_SIDE (preset index 0)
       ARM_SIDES[presetRow[1]] || '',                // Column G - BATTING_SIDE (preset index 1)
       presetRow[4],                                  // Column H - WEIGHT (preset index 4)
@@ -410,7 +430,7 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
       presetRow[14],                                 // Column V - BUNTING (preset index 14)
       presetRow[17],                                 // Column W - FIELDING (preset index 17)
       presetRow[16],                                 // Column X - THROWING_SPEED (preset index 16)
-      '',                                            // Column Y - PRE_CHARGE (custom field, leave empty)
+      customData.preCharge,                          // Column Y - PRE_CHARGE (preserve existing)
       combineStarPitchField(presetRow[6], presetRow[29]), // Column Z - STAR_PITCH (indices 6 + 29)
       presetRow[23],                                 // Column AA - FASTBALL_SPEED (preset index 23)
       presetRow[22],                                 // Column AB - CURVEBALL_SPEED (preset index 22)
