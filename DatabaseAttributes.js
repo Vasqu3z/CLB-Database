@@ -113,6 +113,9 @@ function getPlayerAttributes(playerNames) {
       var playerData = {
         name: playerName,
         characterClass: row[COLS.CHARACTER_CLASS],
+        captain: row[COLS.CAPTAIN],
+        mii: row[COLS.MII],
+        miiColor: row[COLS.MII_COLOR],
         armSide: row[COLS.ARM_SIDE],
         battingSide: row[COLS.BATTING_SIDE],
         weight: row[COLS.WEIGHT],
@@ -124,29 +127,30 @@ function getPlayerAttributes(playerNames) {
         fieldingOverall: row[COLS.FIELDING_OVERALL],
         speedOverall: row[COLS.SPEED_OVERALL],
 
+        // Pitching attributes
+        starPitch: row[COLS.STAR_PITCH],
+        fastballSpeed: row[COLS.FASTBALL_SPEED],
+        curveballSpeed: row[COLS.CURVEBALL_SPEED],
+        curve: row[COLS.CURVE],
+        stamina: row[COLS.STAMINA],
+
         // Hitting attributes
+        starSwing: row[COLS.STAR_SWING],
+        hitCurve: row[COLS.HIT_CURVE],
         hittingTrajectory: row[COLS.HITTING_TRAJECTORY],
         slapHitContact: row[COLS.SLAP_HIT_CONTACT],
         chargeHitContact: row[COLS.CHARGE_HIT_CONTACT],
         slapHitPower: row[COLS.SLAP_HIT_POWER],
         chargeHitPower: row[COLS.CHARGE_HIT_POWER],
+        preCharge: row[COLS.PRE_CHARGE],
 
+        // Fielding attributes
+        fielding: row[COLS.FIELDING],
+        throwingSpeed: row[COLS.THROWING_SPEED],
 
         // Running attributes
         speed: row[COLS.SPEED],
-        bunting: row[COLS.BUNTING],
-
-        // Fielding attributes
-        throwingSpeed: row[COLS.THROWING_SPEED],
-        fielding: row[COLS.FIELDING],
-
-        // Pitching attributes
-        curveballSpeed: row[COLS.CURVEBALL_SPEED],
-        fastballSpeed: row[COLS.FASTBALL_SPEED],
-        curve: row[COLS.CURVE],
-
-        // Stamina
-        stamina: row[COLS.STAMINA]
+        bunting: row[COLS.BUNTING]
       };
 
       results.push(playerData);
@@ -182,6 +186,9 @@ function getPlayerAttributesWithAverages(playerNames) {
       var playerData = {
         name: playerName,
         characterClass: row[COLS.CHARACTER_CLASS],
+        captain: row[COLS.CAPTAIN],
+        mii: row[COLS.MII],
+        miiColor: row[COLS.MII_COLOR],
         armSide: row[COLS.ARM_SIDE],
         battingSide: row[COLS.BATTING_SIDE],
         weight: row[COLS.WEIGHT],
@@ -193,29 +200,30 @@ function getPlayerAttributesWithAverages(playerNames) {
         fieldingOverall: row[COLS.FIELDING_OVERALL],
         speedOverall: row[COLS.SPEED_OVERALL],
 
+        // Pitching attributes
+        starPitch: row[COLS.STAR_PITCH],
+        fastballSpeed: row[COLS.FASTBALL_SPEED],
+        curveballSpeed: row[COLS.CURVEBALL_SPEED],
+        curve: row[COLS.CURVE],
+        stamina: row[COLS.STAMINA],
+
         // Hitting attributes
+        starSwing: row[COLS.STAR_SWING],
+        hitCurve: row[COLS.HIT_CURVE],
         hittingTrajectory: row[COLS.HITTING_TRAJECTORY],
         slapHitContact: row[COLS.SLAP_HIT_CONTACT],
         chargeHitContact: row[COLS.CHARGE_HIT_CONTACT],
         slapHitPower: row[COLS.SLAP_HIT_POWER],
         chargeHitPower: row[COLS.CHARGE_HIT_POWER],
+        preCharge: row[COLS.PRE_CHARGE],
 
+        // Fielding attributes
+        fielding: row[COLS.FIELDING],
+        throwingSpeed: row[COLS.THROWING_SPEED],
 
         // Running attributes
         speed: row[COLS.SPEED],
-        bunting: row[COLS.BUNTING],
-
-        // Fielding attributes
-        throwingSpeed: row[COLS.THROWING_SPEED],
-        fielding: row[COLS.FIELDING],
-
-        // Pitching attributes
-        curveballSpeed: row[COLS.CURVEBALL_SPEED],
-        fastballSpeed: row[COLS.FASTBALL_SPEED],
-        curve: row[COLS.CURVE],
-
-        // Stamina
-        stamina: row[COLS.STAMINA]
+        bunting: row[COLS.BUNTING]
       };
       
       // Calculate individual player averages
