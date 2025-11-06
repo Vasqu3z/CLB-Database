@@ -1,0 +1,431 @@
+// ===== STATS PRESET IMPORT/EXPORT =====
+// Purpose: Import/export chemistry data from Mario Super Sluggers Stats Editor preset format
+// Dependencies: DatabaseConfig.js
+// Entry Point(s): importChemistryFromStatsPreset(), exportChemistryToStatsPreset(), showChemistryEditor()
+
+/**
+ * Character list in game order (positions 0-100)
+ * Extracted from Mario Super Sluggers Stat Editor.py
+ * This is the canonical order used in stats preset files
+ */
+const GAME_CHARACTER_ORDER = [
+  "Mario", "Luigi", "Donkey Kong", "Diddy Kong", "Peach", "Daisy",
+  "Green Yoshi", "Baby Mario", "Baby Luigi", "Bowser", "Wario",
+  "Waluigi", "Green Koopa Troopa", "Red Toad", "Boo", "Toadette",
+  "Red Shy Guy", "Birdo", "Monty Mole", "Bowser Jr.",
+  "Red Koopa Paratroopa", "Blue Pianta", "Red Pianta",
+  "Yellow Pianta", "Blue Noki", "Red Noki", "Green Noki",
+  "Hammer Bro", "Toadsworth", "Blue Toad", "Yellow Toad",
+  "Green Toad", "Purple Toad", "Blue Magikoopa", "Red Magikoopa",
+  "Green Magikoopa", "Yellow Magikoopa", "King Boo", "Petey Piranha",
+  "Dixie Kong", "Goomba", "Paragoomba", "Red Koopa Troopa",
+  "Green Koopa Paratroopa", "Blue Shy Guy", "Yellow Shy Guy",
+  "Green Shy Guy", "Gray Shy Guy", "Gray Dry Bones",
+  "Green Dry Bones", "Dark Bones", "Blue Dry Bones", "Fire Bro",
+  "Boomerang Bro", "Wiggler", "Blooper", "Funky Kong", "Tiny Kong",
+  "Green Kritter", "Blue Kritter", "Red Kritter", "Brown Kritter",
+  "King K. Rool", "Baby Peach", "Baby Daisy", "Baby DK", "Red Yoshi",
+  "Blue Yoshi", "Yellow Yoshi", "Light Blue Yoshi", "Pink Yoshi",
+  "Unused Yoshi 2", "Unused Yoshi", "Unused Toad", "Unused Pianta",
+  "Unused Kritter", "Unused Koopa", "Red Mii (M)", "Orange Mii (M)",
+  "Yellow Mii (M)", "Light Green Mii (M)", "Green Mii (M)",
+  "Blue Mii (M)", "Light Blue Mii (M)", "Pink Mii (M)",
+  "Purple Mii (M)", "Brown Mii (M)", "White Mii (M)", "Black Mii (M)",
+  "Red Mii (F)", "Orange Mii (F)", "Yellow Mii (F)",
+  "Light Green Mii (F)", "Green Mii (F)", "Blue Mii (F)",
+  "Light Blue Mii (F)", "Pink Mii (F)", "Purple Mii (F)",
+  "Brown Mii (F)", "White Mii (F)", "Black Mii (F)"
+];
+
+/**
+ * Show file upload dialog for importing stats preset
+ */
+function importChemistryFromStatsPreset() {
+  const html = HtmlService.createHtmlOutputFromFile('ImportStatsPreset')
+    .setWidth(550)
+    .setHeight(300);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Import Chemistry from Stats Preset');
+}
+
+/**
+ * Parse stats preset file content and populate Chemistry Lookup
+ * @param {string} fileContent - Raw .txt file content from stats preset
+ * @returns {Object} Import results with statistics
+ */
+function parseStatsPresetChemistry(fileContent) {
+  try {
+    const lines = fileContent.split('\n');
+
+    // Validate we have enough lines
+    if (lines.length < 101) {
+      throw new Error(`Invalid preset file: Expected at least 101 lines, found ${lines.length}`);
+    }
+
+    // Extract chemistry section (lines 0-100, first 101 lines)
+    const chemistryLines = lines.slice(0, 101);
+
+    // Parse matrix
+    const matrix = [];
+    for (let i = 0; i < 101; i++) {
+      const row = chemistryLines[i].split(',').map(v => {
+        const val = parseInt(v.trim());
+        if (isNaN(val)) {
+          throw new Error(`Invalid value at row ${i + 1}: "${v}"`);
+        }
+        return val;
+      });
+
+      if (row.length !== 101) {
+        throw new Error(`Invalid row ${i + 1}: Expected 101 values, found ${row.length}`);
+      }
+
+      matrix.push(row);
+    }
+
+    // Convert to lookup pairs
+    const pairs = [];
+    let positiveCount = 0;
+    let strongPositiveCount = 0;
+
+    for (let i = 0; i < 101; i++) {
+      for (let j = i + 1; j < 101; j++) {
+        const value = matrix[i][j];
+
+        // Convert 0/1/2 to chemistry values
+        // 0 = neutral/no chemistry (don't store)
+        // 1 = positive chemistry (+100)
+        // 2 = strong positive chemistry (+200)
+        let chemistry = 0;
+        if (value === 1) {
+          chemistry = 100;
+          positiveCount++;
+        } else if (value === 2) {
+          chemistry = 200;
+          strongPositiveCount++;
+        }
+
+        // Only store non-zero chemistry
+        if (chemistry !== 0) {
+          pairs.push({
+            player1: GAME_CHARACTER_ORDER[i],
+            player2: GAME_CHARACTER_ORDER[j],
+            chemistry: chemistry
+          });
+        }
+      }
+    }
+
+    // Write to Chemistry Lookup sheet
+    const config = getConfig();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
+
+    if (!lookupSheet) {
+      lookupSheet = ss.insertSheet(config.SHEETS.CHEMISTRY_LOOKUP);
+    }
+
+    writeToChemistryLookup(lookupSheet, pairs);
+    updateChemistryDataJSON();
+
+    return {
+      success: true,
+      totalPairs: pairs.length,
+      positiveCount: positiveCount,
+      strongPositiveCount: strongPositiveCount
+    };
+
+  } catch (e) {
+    const config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in parseStatsPresetChemistry: ' + e.toString());
+    }
+    return {
+      success: false,
+      error: e.toString()
+    };
+  }
+}
+
+/**
+ * Export current Chemistry Lookup to stats preset format
+ * Returns the chemistry section as a string (101 lines)
+ */
+function exportChemistryToStatsPreset() {
+  try {
+    const config = getConfig();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
+
+    if (!lookupSheet) {
+      throw new Error('Chemistry Lookup sheet not found');
+    }
+
+    // Initialize 101x101 matrix with zeros
+    const matrix = Array(101).fill(null).map(() => Array(101).fill(0));
+
+    // Build character name to index map
+    const nameToIndex = {};
+    GAME_CHARACTER_ORDER.forEach((name, idx) => {
+      nameToIndex[name] = idx;
+    });
+
+    // Read Chemistry Lookup and populate matrix
+    const lastRow = lookupSheet.getLastRow();
+    if (lastRow > 1) {
+      const data = lookupSheet.getRange(2, 1, lastRow - 1, 3).getValues();
+
+      data.forEach(([p1, p2, chemVal]) => {
+        const player1 = String(p1).trim();
+        const player2 = String(p2).trim();
+        const chem = Math.round(chemVal);
+
+        const idx1 = nameToIndex[player1];
+        const idx2 = nameToIndex[player2];
+
+        if (idx1 !== undefined && idx2 !== undefined) {
+          // Convert chemistry values back to 0/1/2 format
+          let value = 0;
+          if (chem >= 200) value = 2;      // Strong positive
+          else if (chem >= 100) value = 1; // Positive
+          else if (chem <= -100) value = 0; // Negative (treat as neutral for now)
+
+          // Store in both directions (symmetric matrix)
+          matrix[idx1][idx2] = value;
+          matrix[idx2][idx1] = value;
+        }
+      });
+    }
+
+    // Convert matrix to text format
+    const lines = matrix.map(row => row.join(','));
+    const content = lines.join('\n');
+
+    // Create download via HTML dialog
+    const html = HtmlService.createHtmlOutput(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <base target="_top">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+          }
+          button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+          }
+          button:hover {
+            background: #45a049;
+          }
+          .info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <h2>Export Complete</h2>
+        <div class="info">
+          <p>Chemistry data ready for download</p>
+          <p><strong>Note:</strong> This is only the chemistry section (101 lines).</p>
+          <p>To create a full stats preset, you'll need to add stat/trajectory data.</p>
+        </div>
+        <button onclick="downloadFile()">Download Chemistry Data</button>
+        <script>
+          const content = ${JSON.stringify(content)};
+
+          function downloadFile() {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chemistry_export.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        </script>
+      </body>
+      </html>
+    `)
+    .setWidth(450)
+    .setHeight(250);
+
+    SpreadsheetApp.getUi().showModalDialog(html, 'Export Chemistry Data');
+
+  } catch (e) {
+    const config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in exportChemistryToStatsPreset: ' + e.toString());
+    }
+    SpreadsheetApp.getUi().alert('Export Error', e.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
+ * Show visual chemistry editor
+ */
+function showChemistryEditor() {
+  const html = HtmlService.createHtmlOutputFromFile('DatabaseChemistryEditor')
+    .setWidth(1200)
+    .setHeight(800);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Chemistry Matrix Editor');
+}
+
+/**
+ * Get full chemistry matrix for editor
+ * Returns 101x101 matrix with character names
+ */
+function getChemistryMatrix() {
+  try {
+    const config = getConfig();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
+
+    // Initialize matrix with zeros
+    const matrix = Array(101).fill(null).map(() => Array(101).fill(0));
+
+    // Build character name to index map
+    const nameToIndex = {};
+    GAME_CHARACTER_ORDER.forEach((name, idx) => {
+      nameToIndex[name] = idx;
+    });
+
+    // Read Chemistry Lookup
+    if (lookupSheet && lookupSheet.getLastRow() > 1) {
+      const data = lookupSheet.getRange(2, 1, lookupSheet.getLastRow() - 1, 3).getValues();
+
+      data.forEach(([p1, p2, chemVal]) => {
+        const player1 = String(p1).trim();
+        const player2 = String(p2).trim();
+        const chem = Math.round(chemVal);
+
+        const idx1 = nameToIndex[player1];
+        const idx2 = nameToIndex[player2];
+
+        if (idx1 !== undefined && idx2 !== undefined) {
+          // Convert to 0/1/2 format
+          let value = 0;
+          if (chem >= 200) value = 2;
+          else if (chem >= 100) value = 1;
+          else if (chem <= -100) value = 0;
+
+          matrix[idx1][idx2] = value;
+          matrix[idx2][idx1] = value;
+        }
+      });
+    }
+
+    return {
+      matrix: matrix,
+      characters: GAME_CHARACTER_ORDER
+    };
+
+  } catch (e) {
+    const config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getChemistryMatrix: ' + e.toString());
+    }
+    throw e;
+  }
+}
+
+/**
+ * Update chemistry matrix from editor
+ * @param {Array<Array<number>>} matrix - 101x101 matrix of chemistry values (0/1/2)
+ */
+function updateChemistryMatrix(matrix) {
+  try {
+    // Convert matrix to pairs
+    const pairs = [];
+
+    for (let i = 0; i < 101; i++) {
+      for (let j = i + 1; j < 101; j++) {
+        const value = matrix[i][j];
+
+        let chemistry = 0;
+        if (value === 1) chemistry = 100;
+        else if (value === 2) chemistry = 200;
+
+        if (chemistry !== 0) {
+          pairs.push({
+            player1: GAME_CHARACTER_ORDER[i],
+            player2: GAME_CHARACTER_ORDER[j],
+            chemistry: chemistry
+          });
+        }
+      }
+    }
+
+    // Write to Chemistry Lookup
+    const config = getConfig();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
+
+    if (!lookupSheet) {
+      lookupSheet = ss.insertSheet(config.SHEETS.CHEMISTRY_LOOKUP);
+    }
+
+    writeToChemistryLookup(lookupSheet, pairs);
+    updateChemistryDataJSON();
+
+    return { success: true, totalPairs: pairs.length };
+
+  } catch (e) {
+    const config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in updateChemistryMatrix: ' + e.toString());
+    }
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * Get all chemistry relationships for a specific character
+ * @param {string} characterName - Name of character
+ * @returns {Object} Character's chemistry data
+ */
+function getCharacterChemistry(characterName) {
+  try {
+    const idx = GAME_CHARACTER_ORDER.indexOf(characterName);
+    if (idx === -1) {
+      throw new Error('Character not found: ' + characterName);
+    }
+
+    const matrixData = getChemistryMatrix();
+    const row = matrixData.matrix[idx];
+
+    const relationships = [];
+    for (let i = 0; i < 101; i++) {
+      if (i !== idx && row[i] !== 0) {
+        relationships.push({
+          character: GAME_CHARACTER_ORDER[i],
+          value: row[i]
+        });
+      }
+    }
+
+    return {
+      character: characterName,
+      relationships: relationships,
+      positiveCount: relationships.filter(r => r.value === 1).length,
+      strongPositiveCount: relationships.filter(r => r.value === 2).length
+    };
+
+  } catch (e) {
+    const config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in getCharacterChemistry: ' + e.toString());
+    }
+    throw e;
+  }
+}

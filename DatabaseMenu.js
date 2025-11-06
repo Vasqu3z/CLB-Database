@@ -14,6 +14,11 @@ function onOpen() {
     .addItem('🔐 Admin: Comparison with Averages', 'showAttributeComparisonAdmin')
     .addSeparator()
     .addSubMenu(ui.createMenu('🔧 Chemistry Tools')
+      .addItem('✏️ Visual Chemistry Editor', 'showChemistryEditor')
+      .addSeparator()
+      .addItem('📥 Import from Stats Preset', 'importChemistryFromStatsPreset')
+      .addItem('📤 Export to Stats Preset', 'exportChemistryToStatsPreset')
+      .addSeparator()
       .addItem('🔄 Convert Matrix to Lookup (with Variants)', 'convertChemistryMatrixToLookupWithVariants')
       .addSeparator()
       .addSubMenu(ui.createMenu('✏️ Bulk Operations')
@@ -48,6 +53,8 @@ function showAbout() {
     '  • Visual chemistry connections\n' +
     '  • Build and optimize lineups\n\n' +
     '🔧 Chemistry Tools:\n' +
+    '  • Visual Chemistry Editor (new!)\n' +
+    '  • Import/Export stats presets\n' +
     '  • Bulk add/edit/remove chemistry\n' +
     '  • Automatic variant expansion\n' +
     '  • Bidirectional validation\n\n' +
