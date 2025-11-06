@@ -164,8 +164,8 @@ function exportChemistryToStatsPreset() {
       throw new Error('Chemistry Lookup sheet not found');
     }
 
-    // Initialize 101x101 matrix with zeros
-    const matrix = Array(101).fill(null).map(() => Array(101).fill(0));
+    // Initialize 101x101 matrix with neutral (1) as default
+    const matrix = Array(101).fill(null).map(() => Array(101).fill(1));
 
     // Build character name to index map
     const nameToIndex = {};
@@ -298,8 +298,8 @@ function getChemistryMatrix() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
 
-    // Initialize matrix with zeros
-    const matrix = Array(101).fill(null).map(() => Array(101).fill(0));
+    // Initialize matrix with neutral (1) as default
+    const matrix = Array(101).fill(null).map(() => Array(101).fill(1));
 
     // Build character name to index map
     const nameToIndex = {};
