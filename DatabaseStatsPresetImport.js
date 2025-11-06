@@ -351,9 +351,22 @@ function getChemistryMatrix() {
 /**
  * Update chemistry matrix from editor
  * @param {Array<Array<number>>} matrix - 101x101 matrix of chemistry values (0/1/2)
+ * @param {Array<Object>} changes - Array of change objects with char1, char2, oldValue, newValue
  */
-function updateChemistryMatrix(matrix) {
+function updateChemistryMatrix(matrix, changes) {
   try {
+    // Log all changes
+    if (changes && changes.length > 0) {
+      changes.forEach(change => {
+        logChemistryChange(
+          change.char1,
+          change.char2,
+          change.oldValue,
+          change.newValue
+        );
+      });
+    }
+
     // Convert matrix to pairs
     const pairs = [];
 
@@ -392,7 +405,7 @@ function updateChemistryMatrix(matrix) {
     writeToChemistryLookup(lookupSheet, pairs);
     updateChemistryDataJSON();
 
-    return { success: true, totalPairs: pairs.length };
+    return { success: true, totalPairs: pairs.length, changesLogged: changes ? changes.length : 0 };
 
   } catch (e) {
     const config = getConfig();
@@ -441,5 +454,95 @@ function getCharacterChemistry(characterName) {
       Logger.log('Error in getCharacterChemistry: ' + e.toString());
     }
     throw e;
+  }
+}
+
+/**
+ * Log a chemistry change to the Chemistry Change Log sheet
+ * @param {string} char1 - First character name
+ * @param {string} char2 - Second character name
+ * @param {number} oldValue - Old chemistry value (0/1/2)
+ * @param {number} newValue - New chemistry value (0/1/2)
+ */
+function logChemistryChange(char1, char2, oldValue, newValue) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let logSheet = ss.getSheetByName('Chemistry Change Log');
+
+    // Create sheet if it doesn't exist
+    if (!logSheet) {
+      logSheet = ss.insertSheet('Chemistry Change Log');
+
+      // Set up headers
+      logSheet.getRange(1, 1, 1, 5).setValues([
+        ['Timestamp', 'Character 1', 'Character 2', 'Old Value', 'New Value', 'Notes']
+      ]);
+
+      // Format header row
+      const headerRange = logSheet.getRange(1, 1, 1, 6);
+      headerRange.setBackground('#667eea');
+      headerRange.setFontColor('#ffffff');
+      headerRange.setFontWeight('bold');
+      headerRange.setHorizontalAlignment('center');
+
+      // Set column widths
+      logSheet.setColumnWidth(1, 150); // Timestamp
+      logSheet.setColumnWidth(2, 150); // Character 1
+      logSheet.setColumnWidth(3, 150); // Character 2
+      logSheet.setColumnWidth(4, 100); // Old Value
+      logSheet.setColumnWidth(5, 100); // New Value
+      logSheet.setColumnWidth(6, 300); // Notes
+
+      // Freeze header row
+      logSheet.setFrozenRows(1);
+    }
+
+    // Convert values to readable format
+    const valueToText = function(val) {
+      if (val === 0) return 'Negative';
+      if (val === 1) return 'Neutral';
+      if (val === 2) return 'Positive';
+      return 'Unknown';
+    };
+
+    // Add new row
+    const timestamp = new Date();
+    const newRow = [
+      timestamp,
+      char1,
+      char2,
+      valueToText(oldValue),
+      valueToText(newValue),
+      '' // Empty notes column for manual entry
+    ];
+
+    logSheet.appendRow(newRow);
+
+    // Format the timestamp cell
+    const lastRow = logSheet.getLastRow();
+    logSheet.getRange(lastRow, 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+
+    // Add border to new row
+    logSheet.getRange(lastRow, 1, 1, 6).setBorder(true, true, true, true, true, true);
+
+    // Color code based on change type
+    const valueRange = logSheet.getRange(lastRow, 4, 1, 2);
+    if (newValue === 2) {
+      // Changed to positive - green highlight
+      valueRange.setBackground('#d4edda');
+    } else if (newValue === 0) {
+      // Changed to negative - red highlight
+      valueRange.setBackground('#f8d7da');
+    } else {
+      // Changed to neutral - gray highlight
+      valueRange.setBackground('#e2e3e5');
+    }
+
+  } catch (e) {
+    const config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('Error in logChemistryChange: ' + e.toString());
+    }
+    // Don't throw - logging failure shouldn't break the editor
   }
 }

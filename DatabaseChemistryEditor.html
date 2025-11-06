@@ -424,6 +424,7 @@
     let characters = [];
     let currentChemistry = 0;
     let hasChanges = false;
+    let changeLog = []; // Track all changes for logging
 
     // Initialize
     window.onload = function() {
@@ -513,6 +514,17 @@
       const idx2 = parseInt(document.getElementById('char2Select').value);
 
       if (isNaN(idx1) || isNaN(idx2)) return;
+
+      // Track the change before updating
+      const oldValue = chemistryMatrix[idx1][idx2];
+      if (oldValue !== value) {
+        changeLog.push({
+          char1: characters[idx1],
+          char2: characters[idx2],
+          oldValue: oldValue,
+          newValue: value
+        });
+      }
 
       // Update matrix (symmetric)
       chemistryMatrix[idx1][idx2] = value;
@@ -609,13 +621,17 @@
       google.script.run
         .withSuccessHandler(onSaveSuccess)
         .withFailureHandler(onSaveError)
-        .updateChemistryMatrix(chemistryMatrix);
+        .updateChemistryMatrix(chemistryMatrix, changeLog);
     }
 
     function onSaveSuccess(result) {
       if (result.success) {
         hasChanges = false;
-        showToast(`✅ Saved ${result.totalPairs} chemistry pairs`, 'success');
+        changeLog = []; // Clear change log after successful save
+        const logMsg = result.changesLogged > 0
+          ? ` (${result.changesLogged} changes logged)`
+          : '';
+        showToast(`✅ Saved ${result.totalPairs} chemistry pairs${logMsg}`, 'success');
       } else {
         showToast('Save failed: ' + result.error, 'error');
       }
