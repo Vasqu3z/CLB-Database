@@ -12,7 +12,7 @@ function showAttributeComparison() {
 }
 
 function showAttributeComparisonAdmin() {
-  var html = HtmlService.createHtmlOutputFromFile('AttributesToolAdmin')
+  var html = HtmlService.createHtmlOutputFromFile('DatabaseAttributesAdmin')
     .setWidth(1100)
     .setHeight(700)
     .setTitle('Player Attribute Comparison (Admin)');

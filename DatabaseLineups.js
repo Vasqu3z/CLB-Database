@@ -4,7 +4,7 @@
 // Entry Point(s): getLineupChemistryDataFromJSON(), calculateTeamChemistry(), saveLineup(), showLineupBuilder()
 
 function showLineupBuilder() {
-  var html = HtmlService.createHtmlOutputFromFile('DatabaseLineupApp')
+  var html = HtmlService.createHtmlOutputFromFile('DatabaseLineupsApp')
     .setWidth(1200)
     .setHeight(800)
     .setTitle('Lineup Builder');
@@ -16,23 +16,44 @@ function getLineupChemistryDataFromJSON() {
   try {
     var props = PropertiesService.getScriptProperties();
     var dataJson = props.getProperty('CHEMISTRY_DATA');
-    
+
+    // Auto-refresh: Check if cache is missing or stale
     if (!dataJson) {
-      return getChemistryLookupData();
+      var config = getConfig();
+      if (config.DEBUG.ENABLE_LOGGING) {
+        Logger.log('Chemistry JSON cache missing - reading from sheet and updating cache');
+      }
+      updateChemistryDataJSON();
+      dataJson = props.getProperty('CHEMISTRY_DATA');
+
+      if (!dataJson) {
+        return getChemistryLookupData();
+      }
+    } else {
+      // Check if cache is stale
+      var freshnessCheck = checkIfChemistryDataNeedsUpdate();
+      if (freshnessCheck.needsUpdate) {
+        var config = getConfig();
+        if (config.DEBUG.ENABLE_LOGGING) {
+          Logger.log('Chemistry JSON cache stale - auto-refreshing: ' + freshnessCheck.reason);
+        }
+        updateChemistryDataJSON();
+        dataJson = props.getProperty('CHEMISTRY_DATA');
+      }
     }
-    
+
     var data = JSON.parse(dataJson);
     var chemistryMatrix = {};
-    
+
     data.players.forEach(function(player) {
       chemistryMatrix[player] = {};
     });
-    
+
     data.pairs.forEach(function(pair) {
       chemistryMatrix[pair.p1][pair.p2] = pair.v;
       chemistryMatrix[pair.p2][pair.p1] = pair.v;
     });
-    
+
     return {
       matrix: chemistryMatrix,
       players: data.players,
