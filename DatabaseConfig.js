@@ -7,9 +7,9 @@ var CONFIG = {
   // Sheet Names
   SHEETS: {
     ATTRIBUTES: 'Advanced Attributes',
-    CHEMISTRY: 'Chemistry Matrix A-Z',
-    CHEMISTRY_LOOKUP: 'Chemistry Lookup',
-    MII_COLOR_CHEMISTRY: 'Mii Color Chemistry'
+    CHEMISTRY: 'Player Chemistry Matrix',
+    MII_COLOR_CHEMISTRY: 'Mii Chemistry Matrix',
+    CHEMISTRY_LOOKUP: 'Chemistry Lookup'
   },
   
   // Attribute Sheet Configuration
@@ -91,4 +91,5 @@ var CONFIG = {
 // Helper function to get config values
 function getConfig() {
   return CONFIG;
+
 }
