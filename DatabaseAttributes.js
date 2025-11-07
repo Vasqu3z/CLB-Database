@@ -262,6 +262,90 @@ function getPlayerAttributesWithAverages(playerNames) {
   }
 }
 
+/**
+ * Save character attribute changes to the database
+ * @param {string} playerName - Name of the player to update
+ * @param {Object} modifiedFields - Object mapping field labels to new values
+ * @returns {Object} Success/error result
+ */
+function saveCharacterAttributes(playerName, modifiedFields) {
+  try {
+    var config = getConfig();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var attributeSheet = ss.getSheetByName(config.SHEETS.ATTRIBUTES);
+
+    if (!attributeSheet) {
+      throw new Error(config.SHEETS.ATTRIBUTES + ' sheet not found');
+    }
+
+    // Find the player's row
+    var data = getAttributeData();
+    if (!data || !data.map[playerName]) {
+      throw new Error('Player not found: ' + playerName);
+    }
+
+    // Get the player's row number (1-based)
+    var playerIndex = data.players.indexOf(playerName);
+    var rowNumber = config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW + playerIndex;
+
+    // Map field labels to column indices
+    var COLS = config.ATTRIBUTES_CONFIG.COLUMNS;
+    var fieldToColumn = {
+      'Weight': COLS.WEIGHT + 1,
+      'Curve': COLS.CURVE + 1,
+      'Curveball Speed': COLS.CURVEBALL_SPEED + 1,
+      'Fastball Speed': COLS.FASTBALL_SPEED + 1,
+      'Stamina': COLS.STAMINA + 1,
+      'Slap Hit Contact Size': COLS.SLAP_HIT_CONTACT + 1,
+      'Charge Hit Contact Size': COLS.CHARGE_HIT_CONTACT + 1,
+      'Slap Hit Power': COLS.SLAP_HIT_POWER + 1,
+      'Charge Hit Power': COLS.CHARGE_HIT_POWER + 1,
+      'Bunting': COLS.BUNTING + 1,
+      'Speed': COLS.SPEED + 1,
+      'Throwing Speed': COLS.THROWING_SPEED + 1,
+      'Fielding': COLS.FIELDING + 1,
+      'Pitching Overall': COLS.PITCHING_OVERALL + 1,
+      'Batting Overall': COLS.BATTING_OVERALL + 1,
+      'Fielding Overall': COLS.FIELDING_OVERALL + 1,
+      'Speed Overall': COLS.SPEED_OVERALL + 1,
+      'Captain': COLS.CAPTAIN + 1,
+      'Hit Curve': COLS.HIT_CURVE + 1,
+      'Pre-Charge': COLS.PRE_CHARGE + 1,
+      'Mii': COLS.MII + 1
+    };
+
+    // Update each modified field
+    for (var fieldLabel in modifiedFields) {
+      if (modifiedFields.hasOwnProperty(fieldLabel)) {
+        var columnNumber = fieldToColumn[fieldLabel];
+        if (!columnNumber) {
+          Logger.log('Warning: Unknown field label: ' + fieldLabel);
+          continue;
+        }
+
+        var newValue = modifiedFields[fieldLabel];
+
+        // Convert to number if it's a numeric field
+        if (typeof newValue === 'string' && !isNaN(newValue)) {
+          newValue = Number(newValue);
+        }
+
+        // Update the cell
+        attributeSheet.getRange(rowNumber, columnNumber).setValue(newValue);
+      }
+    }
+
+    // Clear cache to force refresh
+    clearAttributeCache();
+
+    return { success: true, message: 'Character attributes updated successfully' };
+
+  } catch (e) {
+    Logger.log('Error in saveCharacterAttributes: ' + e.toString());
+    throw new Error('Failed to save character attributes: ' + e.message);
+  }
+}
+
 // Function to manually clear cache if needed
 function clearAttributeCache() {
   attributeCache = null;

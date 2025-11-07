@@ -207,6 +207,111 @@
       font-style: italic;
       border-top: 2px solid #ff9800;
     }
+
+    /* Edit Mode Styles */
+    .edit-mode-indicator {
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      text-align: center;
+      margin: 15px 0;
+      font-weight: bold;
+    }
+
+    .stat-input {
+      width: 100%;
+      padding: 6px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      text-align: center;
+      font-family: inherit;
+    }
+
+    .stat-input:focus {
+      outline: none;
+      border-color: #1a73e8;
+      background: #e8f0fe;
+    }
+
+    .stat-input.modified {
+      border-color: #1a73e8;
+      background: #e8f0fe;
+    }
+
+    .stat-input.invalid {
+      border-color: #ea4335;
+      background: #fce8e6;
+    }
+
+    .stat-input.valid {
+      border-color: #34a853;
+      background: #e6f4ea;
+    }
+
+    .validation-error {
+      color: #ea4335;
+      font-size: 10px;
+      display: block;
+      margin-top: 2px;
+      text-align: center;
+    }
+
+    .edit-actions {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      padding: 15px;
+      border-top: 3px solid #1a73e8;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .edit-actions button {
+      margin: 0 10px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    button.save-btn {
+      background-color: #34a853;
+    }
+
+    button.save-btn:hover {
+      background-color: #2d9548;
+    }
+
+    button.save-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    button.reset-btn {
+      background-color: #fbbc04;
+      color: #333;
+    }
+
+    button.reset-btn:hover {
+      background-color: #f9ab00;
+    }
+
+    button.cancel-btn {
+      background-color: #ea4335;
+    }
+
+    button.cancel-btn:hover {
+      background-color: #d33828;
+    }
+
+    .edit-help {
+      font-size: 12px;
+      color: #5f6368;
+      font-style: italic;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -251,6 +356,36 @@
   <script>
     // ===== GLOBAL STATE =====
     let allPlayers = [];
+    let editMode = false;
+    let currentEditingPlayer = null;
+    let originalData = {};
+    let modifiedFields = {};
+    let leagueAverages = null;
+
+    // ===== VALIDATION RULES =====
+    const VALIDATION_RULES = {
+      'Weight': { min: 0, max: 4, type: 'number' },
+      'Curve': { min: 0, max: 200, type: 'number' },
+      'Curveball Speed': { min: 70, max: 200, type: 'number' },
+      'Fastball Speed': { min: 70, max: 200, type: 'number' },
+      'Stamina': { min: 0, max: 100, type: 'number' },
+      'Slap Hit Contact Size': { min: 10, max: 200, type: 'number' },
+      'Charge Hit Contact Size': { min: 10, max: 200, type: 'number' },
+      'Slap Hit Power': { min: 0, max: 150, type: 'number' },
+      'Charge Hit Power': { min: 0, max: 150, type: 'number' },
+      'Bunting': { min: 0, max: 200, type: 'number' },
+      'Speed': { min: 0, max: 200, type: 'number' },
+      'Throwing Speed': { min: 0, max: 200, type: 'number' },
+      'Fielding': { min: 0, max: 200, type: 'number' },
+      'Pitching Overall': { min: 0, max: 10, type: 'number' },
+      'Batting Overall': { min: 0, max: 10, type: 'number' },
+      'Fielding Overall': { min: 0, max: 10, type: 'number' },
+      'Speed Overall': { min: 0, max: 10, type: 'number' },
+      'Captain': { options: ['Yes', 'No'], type: 'dropdown' },
+      'Hit Curve': { options: ['Enabled', 'Disabled'], type: 'dropdown' },
+      'Pre-Charge': { options: ['Enabled', 'Disabled'], type: 'dropdown' },
+      'Mii': { options: ['Yes', 'No'], type: 'dropdown' }
+    };
 
     // ===== INITIALIZATION =====
     window.onload = function() {
@@ -375,6 +510,15 @@
       if (player4) playerNames.push(player4);
       if (player5) playerNames.push(player5);
 
+      // Check if single player selected - enable edit mode
+      if (playerNames.length === 1) {
+        editMode = true;
+        currentEditingPlayer = player1;
+      } else {
+        editMode = false;
+        currentEditingPlayer = null;
+      }
+
       document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and calculating averages...</div>';
 
       google.script.run
@@ -382,14 +526,183 @@
         .withFailureHandler(showError)
         .getPlayerAttributesWithAverages(playerNames);
     }
-    
+
+    // ===== VALIDATION FUNCTIONS =====
+
+    function validateField(fieldName, value) {
+      var rule = VALIDATION_RULES[fieldName];
+      if (!rule) return { valid: true }; // No validation rule, assume valid
+
+      if (rule.type === 'number') {
+        var num = Number(value);
+        if (isNaN(num)) return { valid: false, error: 'Must be a number' };
+        if (num < rule.min) return { valid: false, error: 'Min: ' + rule.min };
+        if (num > rule.max) return { valid: false, error: 'Max: ' + rule.max };
+        return { valid: true };
+      }
+
+      if (rule.type === 'dropdown') {
+        if (!rule.options.includes(value)) {
+          return { valid: false, error: 'Invalid option' };
+        }
+        return { valid: true };
+      }
+
+      return { valid: true };
+    }
+
+    function validateAndMarkField(input, fieldName) {
+      var value = input.value;
+      var result = validateField(fieldName, value);
+
+      input.classList.remove('valid', 'invalid', 'modified');
+
+      if (result.valid) {
+        input.classList.add('valid');
+        if (value !== String(originalData[fieldName])) {
+          input.classList.add('modified');
+          modifiedFields[fieldName] = value;
+        } else {
+          delete modifiedFields[fieldName];
+        }
+
+        // Remove error message if exists
+        var errorDiv = input.nextElementSibling;
+        if (errorDiv && errorDiv.classList.contains('validation-error')) {
+          errorDiv.remove();
+        }
+      } else {
+        input.classList.add('invalid');
+
+        // Add/update error message
+        var errorDiv = input.nextElementSibling;
+        if (!errorDiv || !errorDiv.classList.contains('validation-error')) {
+          errorDiv = document.createElement('span');
+          errorDiv.className = 'validation-error';
+          input.parentNode.insertBefore(errorDiv, input.nextSibling);
+        }
+        errorDiv.textContent = result.error;
+      }
+
+      // Update save button state
+      updateSaveButtonState();
+    }
+
+    function validateAllFields() {
+      var inputs = document.querySelectorAll('.stat-input');
+      var allValid = true;
+
+      inputs.forEach(function(input) {
+        var fieldName = input.dataset.field;
+        var result = validateField(fieldName, input.value);
+
+        if (!result.valid) {
+          allValid = false;
+        }
+      });
+
+      return allValid;
+    }
+
+    function updateSaveButtonState() {
+      var saveBtn = document.getElementById('saveBtn');
+      if (!saveBtn) return;
+
+      var hasModifications = Object.keys(modifiedFields).length > 0;
+      var allValid = validateAllFields();
+
+      saveBtn.disabled = !hasModifications || !allValid;
+    }
+
+    // ===== EDIT MODE FUNCTIONS =====
+
+    function createNumberInput(value, min, max, fieldName) {
+      var input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'stat-input';
+      input.value = value;
+      input.min = min;
+      input.max = max;
+      input.dataset.field = fieldName;
+      input.addEventListener('input', function() {
+        validateAndMarkField(this, fieldName);
+      });
+      return input;
+    }
+
+    function createDropdownInput(value, options, fieldName) {
+      var select = document.createElement('select');
+      select.className = 'stat-input';
+      select.dataset.field = fieldName;
+
+      options.forEach(function(opt) {
+        var option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        option.selected = (opt === value);
+        select.appendChild(option);
+      });
+
+      select.addEventListener('change', function() {
+        validateAndMarkField(this, fieldName);
+      });
+
+      return select;
+    }
+
+    function createEditCell(fieldName, value, player) {
+      var td = document.createElement('td');
+      var rule = VALIDATION_RULES[fieldName];
+
+      if (rule && rule.type === 'number') {
+        td.appendChild(createNumberInput(value, rule.min, rule.max, fieldName));
+      } else if (rule && rule.type === 'dropdown') {
+        td.appendChild(createDropdownInput(value, rule.options, fieldName));
+      } else {
+        // Read-only field (no validation rule)
+        td.textContent = value !== undefined && value !== null ? value : '-';
+      }
+
+      return td;
+    }
+
+    function renderStatCell(fieldName, value, isEditMode) {
+      if (isEditMode) {
+        // Render editable input
+        var rule = VALIDATION_RULES[fieldName];
+        if (rule && rule.type === 'number') {
+          var input = createNumberInput(value, rule.min, rule.max, fieldName);
+          return input.outerHTML;
+        } else if (rule && rule.type === 'dropdown') {
+          var select = createDropdownInput(value, rule.options, fieldName);
+          return select.outerHTML;
+        }
+      }
+
+      // Render as text (read-only or no validation rule)
+      return (value !== undefined && value !== null ? value : '-');
+    }
+
     function displayResults(stats) {
       if (!stats || stats.length === 0) {
         showError('No data found for selected players.');
         return;
       }
-      
+
+      // Store original data if in edit mode
+      if (editMode && stats.length === 1) {
+        originalData = JSON.parse(JSON.stringify(stats[0])); // Deep copy
+        modifiedFields = {};
+      }
+
       var html = '';
+
+      // Add edit mode indicator if editing single player
+      if (editMode && stats.length === 1) {
+        html += '<div class="edit-mode-indicator">';
+        html += '✏️ EDIT MODE: Editing ' + stats[0].name + ' | Changes will be highlighted in blue';
+        html += '</div>';
+      }
       
       // Basic Info Section
       html += '<div class="stat-section">';
@@ -415,9 +728,13 @@
       
       basicInfo.forEach(function(info) {
         html += '<tr><td class="stat-label">' + info.label + '</td>';
-        stats.forEach(function(player) {
+        stats.forEach(function(player, index) {
           var value = player[info.key];
-          html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          if (editMode && stats.length === 1 && index === 0) {
+            html += '<td>' + renderStatCell(info.label, value, true) + '</td>';
+          } else {
+            html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          }
         });
         html += '</tr>';
       });
@@ -445,11 +762,15 @@
         html += '<tr class="overall-row"><td class="stat-label">' + stat.label + '</td>';
         var values = stats.map(function(p) { return p[stat.key]; });
         var maxValue = Math.max.apply(null, values);
-        
-        stats.forEach(function(player) {
+
+        stats.forEach(function(player, index) {
           var value = player[stat.key];
-          var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
-          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          if (editMode && stats.length === 1 && index === 0) {
+            html += '<td>' + renderStatCell(stat.label, value, true) + '</td>';
+          } else {
+            var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+            html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          }
         });
         html += '</tr>';
       });
@@ -478,11 +799,15 @@
       html += '<tr class="category-overall"><td class="stat-label">Pitching Overall</td>';
       var pitchingValues = stats.map(function(p) { return p.pitchingOverall; });
       var maxPitchingValue = Math.max.apply(null, pitchingValues);
-      
-      stats.forEach(function(player) {
+
+      stats.forEach(function(player, index) {
         var value = player.pitchingOverall;
-        var cellClass = (value === maxPitchingValue && maxPitchingValue > 0) ? ' class="best-value"' : '';
-        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        if (editMode && stats.length === 1 && index === 0) {
+          html += '<td>' + renderStatCell('Pitching Overall', value, true) + '</td>';
+        } else {
+          var cellClass = (value === maxPitchingValue && maxPitchingValue > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        }
       });
       html += '</tr>';
       
@@ -498,20 +823,24 @@
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
 
         if (stat.isText) {
-          // Text value, no highlighting
+          // Text value, no highlighting, no editing
           stats.forEach(function(player) {
             var value = player[stat.key];
             html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           });
         } else {
-          // Numeric value, highlight best
+          // Numeric value, highlight best, allow editing
           var values = stats.map(function(p) { return p[stat.key]; });
           var maxValue = Math.max.apply(null, values);
 
-          stats.forEach(function(player) {
+          stats.forEach(function(player, index) {
             var value = player[stat.key];
-            var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
-            html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            if (editMode && stats.length === 1 && index === 0) {
+              html += '<td>' + renderStatCell(stat.label, value, true) + '</td>';
+            } else {
+              var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+              html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            }
           });
         }
         html += '</tr>';
@@ -542,11 +871,15 @@
       html += '<tr class="category-overall"><td class="stat-label">Batting Overall</td>';
       var battingValues = stats.map(function(p) { return p.battingOverall; });
       var maxBattingValue = Math.max.apply(null, battingValues);
-      
-      stats.forEach(function(player) {
+
+      stats.forEach(function(player, index) {
         var value = player.battingOverall;
-        var cellClass = (value === maxBattingValue && maxBattingValue > 0) ? ' class="best-value"' : '';
-        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        if (editMode && stats.length === 1 && index === 0) {
+          html += '<td>' + renderStatCell('Batting Overall', value, true) + '</td>';
+        } else {
+          var cellClass = (value === maxBattingValue && maxBattingValue > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        }
       });
       html += '</tr>';
       
@@ -566,19 +899,28 @@
 
         if (stat.isText) {
           // Text value, no highlighting
-          stats.forEach(function(player) {
+          stats.forEach(function(player, index) {
             var value = player[stat.key];
-            html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            // Some text fields are editable (Hit Curve, Pre-Charge)
+            if (editMode && stats.length === 1 && index === 0 && (stat.label === 'Hit Curve' || stat.label === 'Pre-Charge')) {
+              html += '<td>' + renderStatCell(stat.label, value, true) + '</td>';
+            } else {
+              html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            }
           });
         } else {
-          // Numeric values, highlight best
+          // Numeric values, highlight best, allow editing
           var values = stats.map(function(p) { return p[stat.key]; });
           var maxValue = Math.max.apply(null, values);
 
-          stats.forEach(function(player) {
+          stats.forEach(function(player, index) {
             var value = player[stat.key];
-            var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
-            html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            if (editMode && stats.length === 1 && index === 0) {
+              html += '<td>' + renderStatCell(stat.label, value, true) + '</td>';
+            } else {
+              var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+              html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            }
           });
         }
         html += '</tr>';
@@ -609,11 +951,15 @@
       html += '<tr class="category-overall"><td class="stat-label">Fielding Overall</td>';
       var fieldingValues = stats.map(function(p) { return p.fieldingOverall; });
       var maxFieldingValue = Math.max.apply(null, fieldingValues);
-      
-      stats.forEach(function(player) {
+
+      stats.forEach(function(player, index) {
         var value = player.fieldingOverall;
-        var cellClass = (value === maxFieldingValue && maxFieldingValue > 0) ? ' class="best-value"' : '';
-        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        if (editMode && stats.length === 1 && index === 0) {
+          html += '<td>' + renderStatCell('Fielding Overall', value, true) + '</td>';
+        } else {
+          var cellClass = (value === maxFieldingValue && maxFieldingValue > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        }
       });
       html += '</tr>';
       
@@ -626,11 +972,15 @@
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
         var values = stats.map(function(p) { return p[stat.key]; });
         var maxValue = Math.max.apply(null, values);
-        
-        stats.forEach(function(player) {
+
+        stats.forEach(function(player, index) {
           var value = player[stat.key];
-          var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
-          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          if (editMode && stats.length === 1 && index === 0) {
+            html += '<td>' + renderStatCell(stat.label, value, true) + '</td>';
+          } else {
+            var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+            html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          }
         });
         html += '</tr>';
       });
@@ -660,41 +1010,149 @@
       html += '<tr class="category-overall"><td class="stat-label">Speed Overall</td>';
       var speedOverallValues = stats.map(function(p) { return p.speedOverall; });
       var maxSpeedOverall = Math.max.apply(null, speedOverallValues);
-      
-      stats.forEach(function(player) {
+
+      stats.forEach(function(player, index) {
         var value = player.speedOverall;
-        var cellClass = (value === maxSpeedOverall && maxSpeedOverall > 0) ? ' class="best-value"' : '';
-        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        if (editMode && stats.length === 1 && index === 0) {
+          html += '<td>' + renderStatCell('Speed Overall', value, true) + '</td>';
+        } else {
+          var cellClass = (value === maxSpeedOverall && maxSpeedOverall > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        }
       });
       html += '</tr>';
-      
+
       html += '<tr><td class="stat-label">Speed</td>';
       var speedValues = stats.map(function(p) { return p.speed; });
       var maxSpeed = Math.max.apply(null, speedValues);
-      
-      stats.forEach(function(player) {
+
+      stats.forEach(function(player, index) {
         var value = player.speed;
-        var cellClass = (value === maxSpeed && maxSpeed > 0) ? ' class="best-value"' : '';
-        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        if (editMode && stats.length === 1 && index === 0) {
+          html += '<td>' + renderStatCell('Speed', value, true) + '</td>';
+        } else {
+          var cellClass = (value === maxSpeed && maxSpeed > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        }
       });
       html += '</tr>';
-      
+
       html += '<tr><td class="stat-label">Bunting</td>';
       var buntingValues = stats.map(function(p) { return p.bunting; });
       var maxBunting = Math.max.apply(null, buntingValues);
-      
-      stats.forEach(function(player) {
+
+      stats.forEach(function(player, index) {
         var value = player.bunting;
-        var cellClass = (value === maxBunting && maxBunting > 0) ? ' class="best-value"' : '';
-        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        if (editMode && stats.length === 1 && index === 0) {
+          html += '<td>' + renderStatCell('Bunting', value, true) + '</td>';
+        } else {
+          var cellClass = (value === maxBunting && maxBunting > 0) ? ' class="best-value"' : '';
+          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+        }
       });
       html += '</tr>';
       
       html += '</tbody></table></div>';
-      
+
+      // Add edit action buttons if in edit mode
+      if (editMode && stats.length === 1) {
+        html += '<div class="edit-actions">';
+        html += '  <button id="saveBtn" class="save-btn" onclick="saveChanges()" disabled>';
+        html += '    💾 Save Changes';
+        html += '  </button>';
+        html += '  <button class="reset-btn" onclick="resetFields()">';
+        html += '    🔄 Reset to Original';
+        html += '  </button>';
+        html += '  <button class="cancel-btn" onclick="cancelEdit()">';
+        html += '    ❌ Cancel';
+        html += '  </button>';
+        html += '  <div class="edit-help">';
+        html += '    💡 Tip: Modified fields show in blue, invalid fields in red';
+        html += '  </div>';
+        html += '</div>';
+      }
+
       document.getElementById('results').innerHTML = html;
     }
-    
+
+    // ===== EDIT ACTION HANDLERS =====
+
+    function saveChanges() {
+      // Validate all fields
+      if (!validateAllFields()) {
+        showDialog('Validation Error', 'Please fix all invalid fields before saving.');
+        return;
+      }
+
+      // Check if there are any changes
+      if (Object.keys(modifiedFields).length === 0) {
+        showDialog('No Changes', 'No changes to save.');
+        return;
+      }
+
+      // Disable save button and show loading state
+      var saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = '💾 Saving...';
+
+      // Call server-side function to save changes
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showDialog('Success', 'Changes saved successfully!');
+          // Reset edit mode
+          editMode = false;
+          currentEditingPlayer = null;
+          modifiedFields = {};
+          originalData = {};
+          // Refresh the view
+          clearSelection();
+        })
+        .withFailureHandler(function(error) {
+          showDialog('Save Failed', 'Failed to save changes: ' + error);
+          // Re-enable save button
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 Save Changes';
+        })
+        .saveCharacterAttributes(currentEditingPlayer, modifiedFields);
+    }
+
+    function resetFields() {
+      // Reset all input fields to original values
+      var inputs = document.querySelectorAll('.stat-input');
+      inputs.forEach(function(input) {
+        var fieldName = input.dataset.field;
+        var originalValue = originalData[fieldName];
+        input.value = originalValue;
+        validateAndMarkField(input, fieldName);
+      });
+
+      // Clear modified fields
+      modifiedFields = {};
+      updateSaveButtonState();
+    }
+
+    function cancelEdit() {
+      // Confirm if there are unsaved changes
+      if (Object.keys(modifiedFields).length > 0) {
+        if (!confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+          return;
+        }
+      }
+
+      // Reset edit mode
+      editMode = false;
+      currentEditingPlayer = null;
+      modifiedFields = {};
+      originalData = {};
+
+      // Clear the view
+      clearSelection();
+    }
+
+    function showDialog(title, message) {
+      alert(title + '\n\n' + message);
+    }
+
     function clearSelection() {
       document.getElementById('player1').value = '';
       document.getElementById('player2').value = '';
