@@ -247,6 +247,11 @@
       font-family: inherit;
     }
 
+    .stat-input[type="number"] {
+      max-width: 80px;
+      margin: 0 auto;
+    }
+
     .stat-input:focus {
       outline: none;
       border-color: #1a73e8;
@@ -379,6 +384,7 @@
     let originalData = {};
     let modifiedFields = {};
     let leagueAverages = null;
+    let classAverages = null;
 
     // ===== VALIDATION RULES =====
     const VALIDATION_RULES = {
@@ -406,7 +412,11 @@
       'Throwing Side': { options: ['Right', 'Left'], type: 'dropdown' },
       'Batting Side': { options: ['Right', 'Left'], type: 'dropdown' },
       'Hitting Trajectory': { options: [], type: 'dropdown' }, // Will be populated dynamically
-      'Star Pitch': { options: ['Standard', 'Fireball', 'Tornado Ball', 'Barrel Ball', 'Banana Ball', 'Heart Ball', 'Flower Ball', 'Phony Ball', 'Liar Ball', 'Rainbow Ball', 'Suction Ball', 'Killer Ball', 'Graffiti Ball'], type: 'dropdown' },
+      'Star Pitch': { options: [
+        'None', 'Breaking Ball', 'Fastball', 'Change-Up',  // Standard pitch types
+        'Fireball', 'Tornado Ball', 'Barrel Ball', 'Banana Ball', 'Heart Ball', 'Flower Ball',
+        'Phony Ball', 'Liar Ball', 'Rainbow Ball', 'Suction Ball', 'Killer Ball', 'Graffiti Ball'
+      ], type: 'dropdown' },
       'Star Swing': { options: ['Standard', 'Fire Swing', 'Tornado Swing', 'Barrel Swing', 'Banana Swing', 'Heart Swing', 'Flower Swing', 'Phony Swing', 'Liar Swing', 'Egg Swing', 'Cannon Swing', 'Breath Swing', 'Graffiti Swing'], type: 'dropdown' },
       'Ability': { options: [
         // Fielding abilities (at top as requested)
@@ -559,24 +569,49 @@
         editMode = true;
         currentEditingPlayer = player1;
 
-        // Fetch league averages for edit mode
-        document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and league averages...</div>';
+        // Fetch league averages and player data for edit mode
+        document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and averages...</div>';
 
+        // First fetch player data to get character class
         google.script.run
-          .withSuccessHandler(function(averages) {
-            leagueAverages = averages;
-            // Now fetch player data
-            google.script.run
-              .withSuccessHandler(displayResults)
-              .withFailureHandler(showError)
-              .getPlayerAttributesWithAverages(playerNames);
+          .withSuccessHandler(function(stats) {
+            if (stats && stats.length > 0) {
+              var playerClass = stats[0].characterClass;
+
+              // Now fetch both league and class averages in parallel
+              var leaguePromise = new Promise(function(resolve, reject) {
+                google.script.run
+                  .withSuccessHandler(resolve)
+                  .withFailureHandler(reject)
+                  .getLeagueAverages();
+              });
+
+              var classPromise = new Promise(function(resolve, reject) {
+                google.script.run
+                  .withSuccessHandler(resolve)
+                  .withFailureHandler(reject)
+                  .getClassAverages(playerClass);
+              });
+
+              // Wait for both, then display
+              Promise.all([leaguePromise, classPromise])
+                .then(function(results) {
+                  leagueAverages = results[0];
+                  classAverages = results[1];
+                  displayResults(stats);
+                })
+                .catch(showError);
+            } else {
+              showError('No data found for selected player.');
+            }
           })
           .withFailureHandler(showError)
-          .getLeagueAverages();
+          .getPlayerAttributesWithAverages(playerNames);
       } else {
         editMode = false;
         currentEditingPlayer = null;
         leagueAverages = null;
+        classAverages = null;
 
         document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and calculating averages...</div>';
 
@@ -685,6 +720,12 @@
     // Generate HTML string for dropdown input (no event listener yet)
     function generateDropdownInputHTML(value, options, fieldName) {
       var html = '<select class="stat-input" data-field="' + fieldName + '">';
+
+      // Add blank option for optional fields (Mii Color can be blank)
+      if (fieldName === 'Mii Color' && (!value || value === '')) {
+        html += '<option value="" selected></option>';
+      }
+
       options.forEach(function(opt) {
         var selected = (opt === value) ? ' selected' : '';
         html += '<option value="' + opt + '"' + selected + '>' + opt + '</option>';
@@ -756,6 +797,12 @@
       return leagueAverages[leagueAverageKeyMap[key]] || '-';
     }
 
+    // Get class average for a stat key
+    function getClassAverage(key) {
+      if (!classAverages || !leagueAverageKeyMap[key]) return '-';
+      return classAverages[leagueAverageKeyMap[key]] || '-';
+    }
+
     function displayResults(stats) {
       if (!stats || stats.length === 0) {
         showError('No data found for selected players.');
@@ -773,7 +820,7 @@
       // Add edit mode indicator if editing single player
       if (editMode && stats.length === 1) {
         html += '<div class="edit-mode-indicator">';
-        html += '✏️ EDIT MODE: Editing ' + stats[0].name + ' | Changes will be highlighted in blue | League averages shown for comparison';
+        html += '✏️ EDIT MODE: Editing ' + stats[0].name + ' (' + stats[0].characterClass + ') | Changes highlighted in blue | Class & League averages shown';
         html += '</div>';
       }
 
@@ -786,9 +833,14 @@
         html += '<th class="player-header">' + player.name + '</th>';
       });
 
-      // Add league average column in edit mode
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<th class="player-header league-header">League Average</th>';
+      // Add class and league average columns in edit mode
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<th class="player-header league-header">Class Average</th>';
+        }
+        if (leagueAverages) {
+          html += '<th class="player-header league-header">League Average</th>';
+        }
       }
 
       html += '</tr></thead><tbody>';
@@ -814,9 +866,14 @@
             html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           }
         });
-        // Add league average column in edit mode
-        if (editMode && stats.length === 1 && leagueAverages) {
-          html += '<td>' + getLeagueAverage(info.key) + '</td>';
+        // Add class and league average columns in edit mode
+        if (editMode && stats.length === 1) {
+          if (classAverages) {
+            html += '<td>' + getClassAverage(info.key) + '</td>';
+          }
+          if (leagueAverages) {
+            html += '<td>' + getLeagueAverage(info.key) + '</td>';
+          }
         }
         html += '</tr>';
       });
@@ -832,9 +889,14 @@
         html += '<th class="player-header">' + player.name + '</th>';
       });
 
-      // Add league average column in edit mode
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<th class="player-header league-header">League Average</th>';
+      // Add class and league average columns in edit mode
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<th class="player-header league-header">Class Average</th>';
+        }
+        if (leagueAverages) {
+          html += '<th class="player-header league-header">League Average</th>';
+        }
       }
 
       html += '</tr></thead><tbody>';
@@ -860,9 +922,14 @@
             html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           }
         });
-        // Add league average in edit mode
-        if (editMode && stats.length === 1 && leagueAverages) {
-          html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+        // Add class and league average in edit mode
+        if (editMode && stats.length === 1) {
+          if (classAverages) {
+            html += '<td>' + getClassAverage(stat.key) + '</td>';
+          }
+          if (leagueAverages) {
+            html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+          }
         }
         html += '</tr>';
       });
@@ -872,15 +939,26 @@
         var avg = (player.pitchingOverall + player.battingOverall + player.fieldingOverall + player.speedOverall) / 4;
         html += '<td>' + avg.toFixed(2) + '</td>';
       });
-      // Add league average for Overall Average in edit mode
-      if (editMode && stats.length === 1 && leagueAverages) {
-        var leagueOverallAvg = (
-          parseFloat(leagueAverages.pitchingOverall) +
-          parseFloat(leagueAverages.battingOverall) +
-          parseFloat(leagueAverages.fieldingOverall) +
-          parseFloat(leagueAverages.speedOverall)
-        ) / 4;
-        html += '<td>' + leagueOverallAvg.toFixed(2) + '</td>';
+      // Add class and league averages for Overall Average in edit mode
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          var classOverallAvg = (
+            parseFloat(classAverages.pitchingOverall) +
+            parseFloat(classAverages.battingOverall) +
+            parseFloat(classAverages.fieldingOverall) +
+            parseFloat(classAverages.speedOverall)
+          ) / 4;
+          html += '<td>' + classOverallAvg.toFixed(2) + '</td>';
+        }
+        if (leagueAverages) {
+          var leagueOverallAvg = (
+            parseFloat(leagueAverages.pitchingOverall) +
+            parseFloat(leagueAverages.battingOverall) +
+            parseFloat(leagueAverages.fieldingOverall) +
+            parseFloat(leagueAverages.speedOverall)
+          ) / 4;
+          html += '<td>' + leagueOverallAvg.toFixed(2) + '</td>';
+        }
       }
       html += '</tr>';
 
@@ -895,9 +973,14 @@
         html += '<th class="player-header">' + player.name + '</th>';
       });
 
-      // Add league average column in edit mode
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<th class="player-header league-header">League Average</th>';
+      // Add class and league average columns in edit mode
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<th class="player-header league-header">Class Average</th>';
+        }
+        if (leagueAverages) {
+          html += '<th class="player-header league-header">League Average</th>';
+        }
       }
 
       html += '</tr></thead><tbody>';
@@ -916,8 +999,13 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('pitchingOverall') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('pitchingOverall') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('pitchingOverall') + '</td>';
+        }
       }
       html += '</tr>';
 
@@ -943,8 +1031,13 @@
               html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
             }
           });
-          if (editMode && stats.length === 1 && leagueAverages) {
-            html += '<td>-</td>';
+          if (editMode && stats.length === 1) {
+            if (classAverages) {
+              html += '<td>-</td>';
+            }
+            if (leagueAverages) {
+              html += '<td>-</td>';
+            }
           }
         } else {
           // Numeric value, highlight best, allow editing
@@ -960,8 +1053,13 @@
               html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
             }
           });
-          if (editMode && stats.length === 1 && leagueAverages) {
-            html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+          if (editMode && stats.length === 1) {
+            if (classAverages) {
+              html += '<td>' + getClassAverage(stat.key) + '</td>';
+            }
+            if (leagueAverages) {
+              html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+            }
           }
         }
         html += '</tr>';
@@ -973,8 +1071,13 @@
         var avg = player.pitchingAverage;
         html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('pitchingAverage') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('pitchingAverage') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('pitchingAverage') + '</td>';
+        }
       }
       html += '</tr>';
       
@@ -1009,8 +1112,13 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('battingOverall') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('battingOverall') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('battingOverall') + '</td>';
+        }
       }
       html += '</tr>';
       
@@ -1038,8 +1146,13 @@
               html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
             }
           });
-          if (editMode && stats.length === 1 && leagueAverages) {
-            html += '<td>-</td>';
+          if (editMode && stats.length === 1) {
+            if (classAverages) {
+              html += '<td>-</td>';
+            }
+            if (leagueAverages) {
+              html += '<td>-</td>';
+            }
           }
         } else {
           // Numeric values, highlight best, allow editing
@@ -1055,8 +1168,13 @@
               html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
             }
           });
-          if (editMode && stats.length === 1 && leagueAverages) {
-            html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+          if (editMode && stats.length === 1) {
+            if (classAverages) {
+              html += '<td>' + getClassAverage(stat.key) + '</td>';
+            }
+            if (leagueAverages) {
+              html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+            }
           }
         }
         html += '</tr>';
@@ -1068,8 +1186,13 @@
         var avg = player.battingAverage;
         html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('battingAverage') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('battingAverage') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('battingAverage') + '</td>';
+        }
       }
       html += '</tr>';
       
@@ -1104,8 +1227,13 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('fieldingOverall') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('fieldingOverall') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('fieldingOverall') + '</td>';
+        }
       }
       html += '</tr>';
 
@@ -1140,8 +1268,13 @@
         var avg = player.fieldingAverage;
         html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('fieldingAverage') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('fieldingAverage') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('fieldingAverage') + '</td>';
+        }
       }
       html += '</tr>';
       
@@ -1176,8 +1309,13 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('speedOverall') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('speedOverall') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('speedOverall') + '</td>';
+        }
       }
       html += '</tr>';
 
@@ -1194,8 +1332,13 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('speed') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('speed') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('speed') + '</td>';
+        }
       }
       html += '</tr>';
 
@@ -1212,8 +1355,13 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<td>' + getLeagueAverage('bunting') + '</td>';
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<td>' + getClassAverage('bunting') + '</td>';
+        }
+        if (leagueAverages) {
+          html += '<td>' + getLeagueAverage('bunting') + '</td>';
+        }
       }
       html += '</tr>';
       

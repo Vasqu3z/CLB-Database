@@ -169,6 +169,111 @@ function getPlayerAttributes(playerNames) {
 // ===== ADMIN VERSION FUNCTIONS =====
 
 /**
+ * Calculate averages for a specific character class
+ * @param {string} characterClass - The class to calculate averages for (Balanced, Power, Speed, Technique)
+ * @returns {Object} Object with average values for each stat for the class
+ */
+function getClassAverages(characterClass) {
+  try {
+    var data = getAttributeData();
+    if (!data) return null;
+
+    var config = data.config;
+    var COLS = config.ATTRIBUTES_CONFIG.COLUMNS;
+
+    // Collect all numeric stats from players in this class
+    var statTotals = {
+      weight: 0,
+      pitchingOverall: 0,
+      battingOverall: 0,
+      fieldingOverall: 0,
+      speedOverall: 0,
+      fastballSpeed: 0,
+      curveballSpeed: 0,
+      curve: 0,
+      stamina: 0,
+      slapHitContact: 0,
+      chargeHitContact: 0,
+      slapHitPower: 0,
+      chargeHitPower: 0,
+      fielding: 0,
+      throwingSpeed: 0,
+      speed: 0,
+      bunting: 0
+    };
+
+    var playerCount = 0;
+
+    for (var playerName in data.map) {
+      if (data.map.hasOwnProperty(playerName)) {
+        var row = data.map[playerName];
+
+        // Only include players from the specified class
+        if (row[COLS.CHARACTER_CLASS] === characterClass) {
+          statTotals.weight += row[COLS.WEIGHT] || 0;
+          statTotals.pitchingOverall += row[COLS.PITCHING_OVERALL] || 0;
+          statTotals.battingOverall += row[COLS.BATTING_OVERALL] || 0;
+          statTotals.fieldingOverall += row[COLS.FIELDING_OVERALL] || 0;
+          statTotals.speedOverall += row[COLS.SPEED_OVERALL] || 0;
+          statTotals.fastballSpeed += row[COLS.FASTBALL_SPEED] || 0;
+          statTotals.curveballSpeed += row[COLS.CURVEBALL_SPEED] || 0;
+          statTotals.curve += row[COLS.CURVE] || 0;
+          statTotals.stamina += row[COLS.STAMINA] || 0;
+          statTotals.slapHitContact += row[COLS.SLAP_HIT_CONTACT] || 0;
+          statTotals.chargeHitContact += row[COLS.CHARGE_HIT_CONTACT] || 0;
+          statTotals.slapHitPower += row[COLS.SLAP_HIT_POWER] || 0;
+          statTotals.chargeHitPower += row[COLS.CHARGE_HIT_POWER] || 0;
+          statTotals.fielding += row[COLS.FIELDING] || 0;
+          statTotals.throwingSpeed += row[COLS.THROWING_SPEED] || 0;
+          statTotals.speed += row[COLS.SPEED] || 0;
+          statTotals.bunting += row[COLS.BUNTING] || 0;
+          playerCount++;
+        }
+      }
+    }
+
+    if (playerCount === 0) return null;
+
+    // Calculate averages
+    var averages = {};
+    for (var stat in statTotals) {
+      if (statTotals.hasOwnProperty(stat)) {
+        averages[stat] = (statTotals[stat] / playerCount).toFixed(2);
+      }
+    }
+
+    // Calculate derived averages
+    averages.pitchingAverage = (
+      (parseFloat(averages.curveballSpeed) / 2) +
+      (parseFloat(averages.fastballSpeed) / 2) +
+      parseFloat(averages.curve) +
+      parseFloat(averages.stamina)
+    ) / 4;
+    averages.pitchingAverage = averages.pitchingAverage.toFixed(2);
+
+    averages.battingAverage = (
+      parseFloat(averages.slapHitContact) +
+      parseFloat(averages.chargeHitContact) +
+      parseFloat(averages.slapHitPower) +
+      parseFloat(averages.chargeHitPower)
+    ) / 4;
+    averages.battingAverage = averages.battingAverage.toFixed(2);
+
+    averages.fieldingAverage = (
+      parseFloat(averages.throwingSpeed) +
+      parseFloat(averages.fielding)
+    ) / 2;
+    averages.fieldingAverage = averages.fieldingAverage.toFixed(2);
+
+    return averages;
+
+  } catch (e) {
+    Logger.log('Error in getClassAverages: ' + e.toString());
+    return null;
+  }
+}
+
+/**
  * Calculate league-wide averages for all numeric stats
  * @returns {Object} Object with average values for each stat
  */
