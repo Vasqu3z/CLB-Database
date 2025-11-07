@@ -62,9 +62,41 @@ const STAR_PITCH_TYPES = ["None","Breaking Ball","Fastball","Change-Up"];
 
 const ARM_SIDES = ["Right","Left"];
 
-const TRAJECTORY_TYPES = ["Medium","High","Low"];
+// Default trajectory names - overridden by imported config if available
+const DEFAULT_TRAJECTORY_TYPES = ["Medium","High","Low"];
 
 const HIT_CURVE_TYPES = ["Disabled","Enabled"];
+
+/**
+ * Get trajectory type names from imported config, or defaults if not available
+ * @returns {string[]} Array of trajectory names (first 3 used trajectories)
+ */
+function getTrajectoryTypes() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const trajectoryDataJson = props.getProperty('TRAJECTORY_DATA');
+
+    if (trajectoryDataJson) {
+      const trajectoryData = JSON.parse(trajectoryDataJson);
+      // Return only the used trajectories (filter by usage array)
+      const usedTrajectories = [];
+      for (let i = 0; i < 6; i++) {
+        if (trajectoryData.usage[i] === 1) {
+          usedTrajectories.push(trajectoryData.names[i]);
+        }
+      }
+      // If we have at least 3 used trajectories, return them
+      if (usedTrajectories.length >= 3) {
+        return usedTrajectories.slice(0, 3);
+      }
+    }
+  } catch (e) {
+    Logger.log('Could not load trajectory names from config: ' + e.message);
+  }
+
+  // Fall back to defaults if config not available
+  return DEFAULT_TRAJECTORY_TYPES;
+}
 
 /**
  * Generate custom character name from Python format
@@ -402,6 +434,9 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
     }
   }
 
+  // Load trajectory names from imported config
+  const trajectoryTypes = getTrajectoryTypes();
+
   const sheetData = [];
 
   for (let i = 0; i < 101; i++) {
@@ -427,7 +462,7 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
       presetRow[21],
       STAR_SWINGS[presetRow[7]] || '',
       HIT_CURVE_TYPES[presetRow[27]] || '',
-      TRAJECTORY_TYPES[presetRow[26]] || '',
+      trajectoryTypes[presetRow[26]] || '',
       presetRow[10],
       presetRow[11],
       presetRow[12],
@@ -772,6 +807,9 @@ function exportStatsSection(ss, config) {
 
   const cols = config.ATTRIBUTES_CONFIG.COLUMNS;
 
+  // Load trajectory names from imported config
+  const trajectoryTypes = getTrajectoryTypes();
+
   sheetData.forEach((row, idx) => {
     const characterName = String(row[cols.NAME]).trim();
     const charIndex = nameToIndex[characterName];
@@ -815,7 +853,7 @@ function exportStatsSection(ss, config) {
     presetRow[23] = Number(row[cols.FASTBALL_SPEED]) || 0;
     presetRow[24] = Number(row[cols.CURVE]) || 0;
     presetRow[25] = 0;
-    presetRow[26] = TRAJECTORY_TYPES.indexOf(row[cols.HITTING_TRAJECTORY]) >= 0 ? TRAJECTORY_TYPES.indexOf(row[cols.HITTING_TRAJECTORY]) : 0;
+    presetRow[26] = trajectoryTypes.indexOf(row[cols.HITTING_TRAJECTORY]) >= 0 ? trajectoryTypes.indexOf(row[cols.HITTING_TRAJECTORY]) : 0;
     presetRow[27] = HIT_CURVE_TYPES.indexOf(row[cols.HIT_CURVE]) >= 0 ? HIT_CURVE_TYPES.indexOf(row[cols.HIT_CURVE]) : 0;
     presetRow[28] = Number(row[cols.STAMINA]) || 0;
   });

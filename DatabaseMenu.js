@@ -15,12 +15,11 @@ function onOpen() {
     .addSeparator()
     .addSubMenu(ui.createMenu('🔧 Chemistry Tools')
       .addItem('✏️ Visual Chemistry Editor', 'showChemistryEditor')
-      .addSeparator()
-      .addItem('📥 Import from Stats Preset', 'importChemistryFromStatsPreset')
-      .addItem('📤 Export to Stats Preset', 'exportChemistryToStatsPreset')
-      .addSeparator()
       .addItem('📊 Update Chemistry JSON Cache', 'updateChemistryDataJSON')
       .addItem('🧹 Clear JSON Cache', 'clearChemistryCache'))
+    .addSubMenu(ui.createMenu('📦 Stats Preset Import/Export')
+      .addItem('📥 Import Full Preset', 'importChemistryFromStatsPreset')
+      .addItem('📤 Export Full Preset', 'exportChemistryToStatsPreset'))
     .addSeparator()
     .addItem('📋 About', 'showAbout')
     .addToUi();
@@ -45,11 +44,16 @@ function showAbout() {
     '  • Build and optimize lineups\n\n' +
     '🔧 Chemistry Tools:\n' +
     '  • Visual Chemistry Editor\n' +
-    '  • Import/Export full stats presets (228 lines)\n' +
-    '  • Chemistry + Stats + Trajectory\n' +
     '  • Compact relationship views\n' +
     '  • Change logging for balance tracking\n' +
-    '  • Negative/Neutral/Positive scale\n\n' +
+    '  • Negative/Neutral/Positive scale\n' +
+    '  • JSON caching for performance\n\n' +
+    '📦 Stats Preset Import/Export:\n' +
+    '  • Import/Export full presets (228 lines)\n' +
+    '  • Chemistry + Stats + Trajectory data\n' +
+    '  • Custom trajectory name support\n' +
+    '  • Character name mapping\n' +
+    '  • Custom column preservation\n\n' +
     '🔐 Admin Version:\n' +
     '  • Includes league averages\n' +
     '  • Balance characters efficiently\n' +
