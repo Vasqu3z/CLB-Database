@@ -62,6 +62,10 @@ const STAR_PITCH_TYPES = ["None","Breaking Ball","Fastball","Change-Up"];
 
 const ARM_SIDES = ["Right","Left"];
 
+const TRAJECTORY_TYPES = ["Medium","High","Low"];
+
+const HIT_CURVE_TYPES = ["Disabled","Enabled"];
+
 /**
  * Generate custom character name from Python format
  * Only converts characters that are actual variants (based on Python tool's comboList)
@@ -422,8 +426,8 @@ function parseStatsSection(statsLines, ss, config, nameMappings) {
       presetRow[20],
       presetRow[21],
       STAR_SWINGS[presetRow[7]] || '',
-      presetRow[27],
-      presetRow[26],
+      HIT_CURVE_TYPES[presetRow[27]] || '',
+      TRAJECTORY_TYPES[presetRow[26]] || '',
       presetRow[10],
       presetRow[11],
       presetRow[12],
@@ -811,8 +815,8 @@ function exportStatsSection(ss, config) {
     presetRow[23] = Number(row[cols.FASTBALL_SPEED]) || 0;
     presetRow[24] = Number(row[cols.CURVE]) || 0;
     presetRow[25] = 0;
-    presetRow[26] = Number(row[cols.HITTING_TRAJECTORY]) || 0;
-    presetRow[27] = Number(row[cols.HIT_CURVE]) || 0;
+    presetRow[26] = TRAJECTORY_TYPES.indexOf(row[cols.HITTING_TRAJECTORY]) >= 0 ? TRAJECTORY_TYPES.indexOf(row[cols.HITTING_TRAJECTORY]) : 0;
+    presetRow[27] = HIT_CURVE_TYPES.indexOf(row[cols.HIT_CURVE]) >= 0 ? HIT_CURVE_TYPES.indexOf(row[cols.HIT_CURVE]) : 0;
     presetRow[28] = Number(row[cols.STAMINA]) || 0;
   });
 
@@ -962,10 +966,17 @@ function getChemistryMatrix() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
 
+    const mappingSheet = ss.getSheetByName(config.SHEETS.CHARACTER_NAME_MAPPING);
+    const nameMappings = loadCharacterNameMappings(mappingSheet);
+
+    const customNames = GAME_CHARACTER_ORDER.map(pythonName =>
+      getCustomCharacterName(nameMappings, pythonName)
+    );
+
     const matrix = Array(101).fill(null).map(() => Array(101).fill(1));
 
     const nameToIndex = {};
-    GAME_CHARACTER_ORDER.forEach((name, idx) => {
+    customNames.forEach((name, idx) => {
       nameToIndex[name] = idx;
     });
 
@@ -994,7 +1005,7 @@ function getChemistryMatrix() {
 
     return {
       matrix: matrix,
-      characters: GAME_CHARACTER_ORDER
+      characters: customNames
     };
 
   } catch (e) {
@@ -1026,6 +1037,15 @@ function updateChemistryMatrix(matrix, changes) {
 
     const config = getConfig();
     const thresholds = config.CHEMISTRY_CONFIG.THRESHOLDS;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    const mappingSheet = ss.getSheetByName(config.SHEETS.CHARACTER_NAME_MAPPING);
+    const nameMappings = loadCharacterNameMappings(mappingSheet);
+
+    const customNames = GAME_CHARACTER_ORDER.map(pythonName =>
+      getCustomCharacterName(nameMappings, pythonName)
+    );
+
     const pairs = [];
 
     for (let i = 0; i < 101; i++) {
@@ -1039,15 +1059,14 @@ function updateChemistryMatrix(matrix, changes) {
 
         if (chemistry !== null) {
           pairs.push({
-            player1: GAME_CHARACTER_ORDER[i],
-            player2: GAME_CHARACTER_ORDER[j],
+            player1: customNames[i],
+            player2: customNames[j],
             chemistry: chemistry
           });
         }
       }
     }
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
     let lookupSheet = ss.getSheetByName(config.SHEETS.CHEMISTRY_LOOKUP);
 
     if (!lookupSheet) {
@@ -1075,19 +1094,20 @@ function updateChemistryMatrix(matrix, changes) {
  */
 function getCharacterChemistry(characterName) {
   try {
-    const idx = GAME_CHARACTER_ORDER.indexOf(characterName);
+    const matrixData = getChemistryMatrix();
+    const idx = matrixData.characters.indexOf(characterName);
+
     if (idx === -1) {
       throw new Error('Character not found: ' + characterName);
     }
 
-    const matrixData = getChemistryMatrix();
     const row = matrixData.matrix[idx];
 
     const relationships = [];
     for (let i = 0; i < 101; i++) {
       if (i !== idx && row[i] !== 0) {
         relationships.push({
-          character: GAME_CHARACTER_ORDER[i],
+          character: matrixData.characters[i],
           value: row[i]
         });
       }
