@@ -110,7 +110,7 @@
     }
     
     th, td {
-    padding: 8px;
+    padding: 10px 8px;
     text-align: center;
     border-bottom: 1px solid #ddd;
     font-size: 13px;
@@ -138,13 +138,6 @@
     
     tr:hover {
       background-color: #f8f9fa;
-    }
-    
-    .stat-label {
-      font-weight: bold;
-      min-width: 180px;
-      text-align: left;
-      padding-left: 15px;
     }
     
     .loading {
@@ -206,6 +199,31 @@
       font-weight: bold;
       font-style: italic;
       border-top: 2px solid #ff9800;
+    }
+
+    /* Edit Mode: Two-column layout */
+    .edit-mode-table {
+      display: flex;
+      gap: 20px;
+    }
+
+    .edit-mode-table .player-column {
+      flex: 1;
+    }
+
+    .edit-mode-table .league-column {
+      flex: 1;
+      opacity: 0.8;
+    }
+
+    .edit-mode-table table {
+      width: 100%;
+    }
+
+    .league-header {
+      background: #fff3e0 !important;
+      color: #333;
+      font-style: italic;
     }
 
     /* Edit Mode Styles */
@@ -514,17 +532,33 @@
       if (playerNames.length === 1) {
         editMode = true;
         currentEditingPlayer = player1;
+
+        // Fetch league averages for edit mode
+        document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and league averages...</div>';
+
+        google.script.run
+          .withSuccessHandler(function(averages) {
+            leagueAverages = averages;
+            // Now fetch player data
+            google.script.run
+              .withSuccessHandler(displayResults)
+              .withFailureHandler(showError)
+              .getPlayerAttributesWithAverages(playerNames);
+          })
+          .withFailureHandler(showError)
+          .getLeagueAverages();
       } else {
         editMode = false;
         currentEditingPlayer = null;
+        leagueAverages = null;
+
+        document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and calculating averages...</div>';
+
+        google.script.run
+          .withSuccessHandler(displayResults)
+          .withFailureHandler(showError)
+          .getPlayerAttributesWithAverages(playerNames);
       }
-
-      document.getElementById('results').innerHTML = '<div class="loading">Loading attributes and calculating averages...</div>';
-
-      google.script.run
-        .withSuccessHandler(displayResults)
-        .withFailureHandler(showError)
-        .getPlayerAttributesWithAverages(playerNames);
     }
 
     // ===== VALIDATION FUNCTIONS =====
@@ -616,71 +650,84 @@
 
     // ===== EDIT MODE FUNCTIONS =====
 
-    function createNumberInput(value, min, max, fieldName) {
-      var input = document.createElement('input');
-      input.type = 'number';
-      input.className = 'stat-input';
-      input.value = value;
-      input.min = min;
-      input.max = max;
-      input.dataset.field = fieldName;
-      input.addEventListener('input', function() {
-        validateAndMarkField(this, fieldName);
-      });
-      return input;
+    // Generate HTML string for number input (no event listener yet)
+    function generateNumberInputHTML(value, min, max, fieldName) {
+      return '<input type="number" class="stat-input" value="' + value +
+             '" min="' + min + '" max="' + max + '" data-field="' + fieldName + '">';
     }
 
-    function createDropdownInput(value, options, fieldName) {
-      var select = document.createElement('select');
-      select.className = 'stat-input';
-      select.dataset.field = fieldName;
-
+    // Generate HTML string for dropdown input (no event listener yet)
+    function generateDropdownInputHTML(value, options, fieldName) {
+      var html = '<select class="stat-input" data-field="' + fieldName + '">';
       options.forEach(function(opt) {
-        var option = document.createElement('option');
-        option.value = opt;
-        option.textContent = opt;
-        option.selected = (opt === value);
-        select.appendChild(option);
+        var selected = (opt === value) ? ' selected' : '';
+        html += '<option value="' + opt + '"' + selected + '>' + opt + '</option>';
       });
-
-      select.addEventListener('change', function() {
-        validateAndMarkField(this, fieldName);
-      });
-
-      return select;
+      html += '</select>';
+      return html;
     }
 
-    function createEditCell(fieldName, value, player) {
-      var td = document.createElement('td');
-      var rule = VALIDATION_RULES[fieldName];
-
-      if (rule && rule.type === 'number') {
-        td.appendChild(createNumberInput(value, rule.min, rule.max, fieldName));
-      } else if (rule && rule.type === 'dropdown') {
-        td.appendChild(createDropdownInput(value, rule.options, fieldName));
-      } else {
-        // Read-only field (no validation rule)
-        td.textContent = value !== undefined && value !== null ? value : '-';
-      }
-
-      return td;
-    }
-
+    // Generate appropriate input HTML based on field type
     function renderStatCell(fieldName, value, isEditMode) {
       if (isEditMode) {
-        // Render editable input
         var rule = VALIDATION_RULES[fieldName];
         if (rule && rule.type === 'number') {
-          var input = createNumberInput(value, rule.min, rule.max, fieldName);
-          return input.outerHTML;
+          return generateNumberInputHTML(value, rule.min, rule.max, fieldName);
         } else if (rule && rule.type === 'dropdown') {
-          var select = createDropdownInput(value, rule.options, fieldName);
-          return select.outerHTML;
+          return generateDropdownInputHTML(value, rule.options, fieldName);
         }
       }
 
       // Render as text (read-only or no validation rule)
       return (value !== undefined && value !== null ? value : '-');
+    }
+
+    // Attach event listeners to all inputs after HTML is rendered
+    function attachInputListeners() {
+      var inputs = document.querySelectorAll('.stat-input');
+      inputs.forEach(function(input) {
+        var fieldName = input.dataset.field;
+
+        if (input.tagName === 'SELECT') {
+          input.addEventListener('change', function() {
+            validateAndMarkField(this, fieldName);
+          });
+        } else {
+          input.addEventListener('input', function() {
+            validateAndMarkField(this, fieldName);
+          });
+        }
+      });
+    }
+
+    // Map field keys to league average keys
+    var leagueAverageKeyMap = {
+      'weight': 'weight',
+      'pitchingOverall': 'pitchingOverall',
+      'battingOverall': 'battingOverall',
+      'fieldingOverall': 'fieldingOverall',
+      'speedOverall': 'speedOverall',
+      'fastballSpeed': 'fastballSpeed',
+      'curveballSpeed': 'curveballSpeed',
+      'curve': 'curve',
+      'stamina': 'stamina',
+      'slapHitContact': 'slapHitContact',
+      'chargeHitContact': 'chargeHitContact',
+      'slapHitPower': 'slapHitPower',
+      'chargeHitPower': 'chargeHitPower',
+      'fielding': 'fielding',
+      'throwingSpeed': 'throwingSpeed',
+      'speed': 'speed',
+      'bunting': 'bunting',
+      'pitchingAverage': 'pitchingAverage',
+      'battingAverage': 'battingAverage',
+      'fieldingAverage': 'fieldingAverage'
+    };
+
+    // Get league average for a stat key
+    function getLeagueAverage(key) {
+      if (!leagueAverages || !leagueAverageKeyMap[key]) return '-';
+      return leagueAverages[leagueAverageKeyMap[key]] || '-';
     }
 
     function displayResults(stats) {
@@ -700,19 +747,24 @@
       // Add edit mode indicator if editing single player
       if (editMode && stats.length === 1) {
         html += '<div class="edit-mode-indicator">';
-        html += '✏️ EDIT MODE: Editing ' + stats[0].name + ' | Changes will be highlighted in blue';
+        html += '✏️ EDIT MODE: Editing ' + stats[0].name + ' | Changes will be highlighted in blue | League averages shown for comparison';
         html += '</div>';
       }
-      
+
       // Basic Info Section
       html += '<div class="stat-section">';
       html += '<h3>📋 Basic Information</h3>';
       html += '<table><thead><tr><th class="stat-label">Attribute</th>';
-      
+
       stats.forEach(function(player) {
         html += '<th class="player-header">' + player.name + '</th>';
       });
-      
+
+      // Add league average column in edit mode
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<th class="player-header league-header">League Average</th>';
+      }
+
       html += '</tr></thead><tbody>';
       
       var basicInfo = [
@@ -736,6 +788,10 @@
             html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           }
         });
+        // Add league average column in edit mode
+        if (editMode && stats.length === 1 && leagueAverages) {
+          html += '<td>' + getLeagueAverage(info.key) + '</td>';
+        }
         html += '</tr>';
       });
       
@@ -745,10 +801,16 @@
       html += '<div class="stat-section">';
       html += '<h3>⭐ Overall Ratings</h3>';
       html += '<table><thead><tr><th class="stat-label">Attribute</th>';
-      
+
       stats.forEach(function(player) {
         html += '<th class="player-header">' + player.name + '</th>';
       });
+
+      // Add league average column in edit mode
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<th class="player-header league-header">League Average</th>';
+      }
+
       html += '</tr></thead><tbody>';
       
       var overallStats = [
@@ -772,14 +834,28 @@
             html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           }
         });
+        // Add league average in edit mode
+        if (editMode && stats.length === 1 && leagueAverages) {
+          html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+        }
         html += '</tr>';
       });
-      
+
       html += '<tr class="average-row"><td class="stat-label">Overall Average</td>';
       stats.forEach(function(player) {
         var avg = (player.pitchingOverall + player.battingOverall + player.fieldingOverall + player.speedOverall) / 4;
         html += '<td>' + avg.toFixed(2) + '</td>';
       });
+      // Add league average for Overall Average in edit mode
+      if (editMode && stats.length === 1 && leagueAverages) {
+        var leagueOverallAvg = (
+          parseFloat(leagueAverages.pitchingOverall) +
+          parseFloat(leagueAverages.battingOverall) +
+          parseFloat(leagueAverages.fieldingOverall) +
+          parseFloat(leagueAverages.speedOverall)
+        ) / 4;
+        html += '<td>' + leagueOverallAvg.toFixed(2) + '</td>';
+      }
       html += '</tr>';
 
       html += '</tbody></table></div>';
@@ -788,11 +864,16 @@
       html += '<div class="stat-section">';
       html += '<h3>⚾ Pitching Attributes</h3>';
       html += '<table><thead><tr><th class="stat-label">Attribute</th>';
-      
+
       stats.forEach(function(player) {
         html += '<th class="player-header">' + player.name + '</th>';
       });
-      
+
+      // Add league average column in edit mode
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<th class="player-header league-header">League Average</th>';
+      }
+
       html += '</tr></thead><tbody>';
       
       // Add Pitching Overall at the top
@@ -809,8 +890,11 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('pitchingOverall') + '</td>';
+      }
       html += '</tr>';
-      
+
       var pitchingStats = [
         {label: 'Star Pitch', key: 'starPitch', isText: true},
         {label: 'Fastball Speed', key: 'fastballSpeed'},
@@ -818,7 +902,7 @@
         {label: 'Curve', key: 'curve'},
         {label: 'Stamina', key: 'stamina'}
       ];
-      
+
       pitchingStats.forEach(function(stat) {
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
 
@@ -828,6 +912,9 @@
             var value = player[stat.key];
             html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           });
+          if (editMode && stats.length === 1 && leagueAverages) {
+            html += '<td>-</td>';
+          }
         } else {
           // Numeric value, highlight best, allow editing
           var values = stats.map(function(p) { return p[stat.key]; });
@@ -842,16 +929,22 @@
               html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
             }
           });
+          if (editMode && stats.length === 1 && leagueAverages) {
+            html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+          }
         }
         html += '</tr>';
       });
-      
+
       // Add Pitching Average row
       html += '<tr class="average-row"><td class="stat-label">Pitching Average</td>';
       stats.forEach(function(player) {
         var avg = player.pitchingAverage;
         html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('pitchingAverage') + '</td>';
+      }
       html += '</tr>';
       
       html += '</tbody></table></div>';
@@ -860,13 +953,17 @@
       html += '<div class="stat-section">';
       html += '<h3>🏏 Batting Attributes</h3>';
       html += '<table><thead><tr><th class="stat-label">Attribute</th>';
-      
+
       stats.forEach(function(player) {
         html += '<th class="player-header">' + player.name + '</th>';
       });
-      
+
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<th class="player-header league-header">League Average</th>';
+      }
+
       html += '</tr></thead><tbody>';
-      
+
       // Add Batting Overall at the top
       html += '<tr class="category-overall"><td class="stat-label">Batting Overall</td>';
       var battingValues = stats.map(function(p) { return p.battingOverall; });
@@ -881,6 +978,9 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('battingOverall') + '</td>';
+      }
       html += '</tr>';
       
       var hittingStats = [
@@ -908,6 +1008,9 @@
               html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
             }
           });
+          if (editMode && stats.length === 1 && leagueAverages) {
+            html += '<td>-</td>';
+          }
         } else {
           // Numeric values, highlight best, allow editing
           var values = stats.map(function(p) { return p[stat.key]; });
@@ -922,16 +1025,22 @@
               html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
             }
           });
+          if (editMode && stats.length === 1 && leagueAverages) {
+            html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+          }
         }
         html += '</tr>';
       });
-      
+
       // Add Batting Average row
       html += '<tr class="average-row"><td class="stat-label">Batting Average</td>';
       stats.forEach(function(player) {
         var avg = player.battingAverage;
         html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('battingAverage') + '</td>';
+      }
       html += '</tr>';
       
       html += '</tbody></table></div>';
@@ -940,13 +1049,17 @@
       html += '<div class="stat-section">';
       html += '<h3>🧤 Fielding Attributes</h3>';
       html += '<table><thead><tr><th class="stat-label">Attribute</th>';
-      
+
       stats.forEach(function(player) {
         html += '<th class="player-header">' + player.name + '</th>';
       });
-      
+
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<th class="player-header league-header">League Average</th>';
+      }
+
       html += '</tr></thead><tbody>';
-      
+
       // Add Fielding Overall at the top
       html += '<tr class="category-overall"><td class="stat-label">Fielding Overall</td>';
       var fieldingValues = stats.map(function(p) { return p.fieldingOverall; });
@@ -961,13 +1074,16 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('fieldingOverall') + '</td>';
+      }
       html += '</tr>';
-      
+
       var fieldingStats = [
         {label: 'Fielding', key: 'fielding'},
         {label: 'Throwing Speed', key: 'throwingSpeed'}
       ];
-      
+
       fieldingStats.forEach(function(stat) {
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
         var values = stats.map(function(p) { return p[stat.key]; });
@@ -982,15 +1098,21 @@
             html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           }
         });
+        if (editMode && stats.length === 1 && leagueAverages) {
+          html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+        }
         html += '</tr>';
       });
-      
+
       // Add Fielding Average row
       html += '<tr class="average-row"><td class="stat-label">Fielding Average</td>';
       stats.forEach(function(player) {
         var avg = player.fieldingAverage;
         html += '<td>' + (avg !== undefined && avg !== null ? avg.toFixed(2) : '-') + '</td>';
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('fieldingAverage') + '</td>';
+      }
       html += '</tr>';
       
       html += '</tbody></table></div>';
@@ -999,13 +1121,17 @@
       html += '<div class="stat-section">';
       html += '<h3>🏃 Running Attributes</h3>';
       html += '<table><thead><tr><th class="stat-label">Attribute</th>';
-      
+
       stats.forEach(function(player) {
         html += '<th class="player-header">' + player.name + '</th>';
       });
-      
+
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<th class="player-header league-header">League Average</th>';
+      }
+
       html += '</tr></thead><tbody>';
-      
+
       // Add Speed Overall at the top
       html += '<tr class="category-overall"><td class="stat-label">Speed Overall</td>';
       var speedOverallValues = stats.map(function(p) { return p.speedOverall; });
@@ -1020,6 +1146,9 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('speedOverall') + '</td>';
+      }
       html += '</tr>';
 
       html += '<tr><td class="stat-label">Speed</td>';
@@ -1035,6 +1164,9 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('speed') + '</td>';
+      }
       html += '</tr>';
 
       html += '<tr><td class="stat-label">Bunting</td>';
@@ -1050,6 +1182,9 @@
           html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
         }
       });
+      if (editMode && stats.length === 1 && leagueAverages) {
+        html += '<td>' + getLeagueAverage('bunting') + '</td>';
+      }
       html += '</tr>';
       
       html += '</tbody></table></div>';
@@ -1073,6 +1208,11 @@
       }
 
       document.getElementById('results').innerHTML = html;
+
+      // Attach event listeners to all inputs after DOM is updated
+      if (editMode && stats.length === 1) {
+        attachInputListeners();
+      }
     }
 
     // ===== EDIT ACTION HANDLERS =====
