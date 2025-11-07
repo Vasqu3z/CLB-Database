@@ -356,6 +356,98 @@
       background: #f44336;
     }
 
+    .dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .dialog-overlay.show {
+      display: flex;
+    }
+
+    .dialog-box {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .dialog-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .dialog-message {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .dialog-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .dialog-btn.primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .dialog-btn.primary:hover {
+      background: #5568d3;
+    }
+
+    .dialog-btn.secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .dialog-btn.secondary:hover {
+      background: #d0d0d0;
+    }
+
+    select:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
   </style>
 </head>
 <body>
@@ -371,8 +463,8 @@
         <div class="character-column">
           <div class="input-group">
             <label>Character 1</label>
-            <select id="char1Select" onchange="updateCharacterInfo()">
-              <option value="">Select a character...</option>
+            <select id="char1Select" onchange="updateCharacterInfo()" disabled>
+              <option value="">Loading characters...</option>
             </select>
           </div>
           <div id="char1Info" class="relationships-compact"></div>
@@ -400,8 +492,8 @@
         <div class="character-column">
           <div class="input-group">
             <label>Character 2</label>
-            <select id="char2Select" onchange="updateCharacterInfo()">
-              <option value="">Select a character...</option>
+            <select id="char2Select" onchange="updateCharacterInfo()" disabled>
+              <option value="">Loading characters...</option>
             </select>
           </div>
           <div id="char2Info" class="relationships-compact"></div>
@@ -418,6 +510,17 @@
   </div>
 
   <div id="toast" class="toast"></div>
+
+  <!-- Dialog Overlay -->
+  <div id="dialogOverlay" class="dialog-overlay">
+    <div class="dialog-box">
+      <div class="dialog-title" id="dialogTitle">Dialog Title</div>
+      <div class="dialog-message" id="dialogMessage">Dialog message goes here.</div>
+      <div class="dialog-buttons" id="dialogButtons">
+        <button class="dialog-btn primary" onclick="hideDialog()">OK</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     let chemistryMatrix = [];
@@ -438,12 +541,25 @@
     function onDataLoaded(data) {
       chemistryMatrix = data.matrix;
       characters = data.characters;
+
+      // Enable dropdowns
+      const char1Select = document.getElementById('char1Select');
+      const char2Select = document.getElementById('char2Select');
+
+      char1Select.disabled = false;
+      char2Select.disabled = false;
+
+      // Clear loading placeholder and add proper placeholder
+      char1Select.innerHTML = '<option value="">Select a character...</option>';
+      char2Select.innerHTML = '<option value="">Select a character...</option>';
+
       populateCharacterDropdowns();
+      addSelectFilter();
       showToast('Chemistry data loaded', 'success');
     }
 
     function onError(error) {
-      showToast('Error loading data: ' + error.message, 'error');
+      showDialog('Error Loading Data', 'Failed to load chemistry data: ' + error.message);
     }
 
     function populateCharacterDropdowns() {
@@ -458,6 +574,45 @@
           option.value = idx;
           option.textContent = char;
           select.appendChild(option);
+        });
+      });
+    }
+
+    function addSelectFilter() {
+      const selects = ['char1Select', 'char2Select'];
+
+      selects.forEach(function(selectId) {
+        const select = document.getElementById(selectId);
+
+        // Add keyboard search functionality
+        let searchTerm = '';
+        let searchTimeout;
+
+        select.addEventListener('keydown', function(e) {
+          // Clear previous timeout
+          clearTimeout(searchTimeout);
+
+          // Build search term
+          if (e.key.length === 1) {
+            searchTerm += e.key.toLowerCase();
+
+            // Find matching option
+            const options = Array.from(select.options);
+            const match = options.find(function(opt) {
+              return opt.textContent.toLowerCase().startsWith(searchTerm);
+            });
+
+            if (match) {
+              select.value = match.value;
+              // Trigger change event to update character info
+              select.dispatchEvent(new Event('change'));
+            }
+          }
+
+          // Clear search term after 1 second
+          searchTimeout = setTimeout(function() {
+            searchTerm = '';
+          }, 1000);
         });
       });
     }
@@ -487,7 +642,7 @@
       }
 
       if (idx1 === idx2) {
-        showToast('Cannot set chemistry between same character', 'error');
+        showDialog('Invalid Selection', 'Cannot set chemistry between the same character. Please select two different characters.');
         document.getElementById('quickEditPanel').style.display = 'none';
         return;
       }
@@ -633,12 +788,12 @@
           : '';
         showToast(`✅ Saved ${result.totalPairs} chemistry pairs${logMsg}`, 'success');
       } else {
-        showToast('Save failed: ' + result.error, 'error');
+        showDialog('Save Failed', 'Failed to save chemistry data: ' + result.error);
       }
     }
 
     function onSaveError(error) {
-      showToast('Save failed: ' + error.message, 'error');
+      showDialog('Save Failed', 'An error occurred while saving: ' + error.message);
     }
 
     function exportChemistry() {
@@ -655,6 +810,33 @@
       setTimeout(() => {
         toast.classList.remove('show');
       }, 3000);
+    }
+
+    // Dialog Functions
+    function showDialog(title, message, buttons = null) {
+      document.getElementById('dialogTitle').textContent = title;
+      document.getElementById('dialogMessage').textContent = message;
+
+      const buttonsContainer = document.getElementById('dialogButtons');
+
+      if (buttons) {
+        buttonsContainer.innerHTML = '';
+        buttons.forEach(btn => {
+          const button = document.createElement('button');
+          button.className = 'dialog-btn ' + (btn.primary ? 'primary' : 'secondary');
+          button.textContent = btn.text;
+          button.onclick = btn.onClick;
+          buttonsContainer.appendChild(button);
+        });
+      } else {
+        buttonsContainer.innerHTML = '<button class="dialog-btn primary" onclick="hideDialog()">OK</button>';
+      }
+
+      document.getElementById('dialogOverlay').classList.add('show');
+    }
+
+    function hideDialog() {
+      document.getElementById('dialogOverlay').classList.remove('show');
     }
 
     // Warn before closing with unsaved changes
