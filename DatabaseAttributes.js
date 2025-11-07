@@ -409,7 +409,14 @@ function saveCharacterAttributes(playerName, modifiedFields) {
       'Captain': COLS.CAPTAIN + 1,
       'Hit Curve': COLS.HIT_CURVE + 1,
       'Pre-Charge': COLS.PRE_CHARGE + 1,
-      'Mii': COLS.MII + 1
+      'Mii': COLS.MII + 1,
+      'Throwing Side': COLS.ARM_SIDE + 1,
+      'Batting Side': COLS.BATTING_SIDE + 1,
+      'Hitting Trajectory': COLS.HITTING_TRAJECTORY + 1,
+      'Star Swing': COLS.STAR_SWING + 1,
+      'Star Pitch': COLS.STAR_PITCH + 1,
+      'Ability': COLS.ABILITY + 1,
+      'Mii Color': COLS.MII_COLOR + 1
     };
 
     // Update each modified field
@@ -422,6 +429,11 @@ function saveCharacterAttributes(playerName, modifiedFields) {
         }
 
         var newValue = modifiedFields[fieldLabel];
+
+        // Special handling for Ability field - strip suffixes
+        if (fieldLabel === 'Ability') {
+          newValue = newValue.replace(' (Fielding)', '').replace(' (Baserunning)', '');
+        }
 
         // Convert to number if it's a numeric field
         if (typeof newValue === 'string' && !isNaN(newValue)) {

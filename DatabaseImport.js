@@ -99,6 +99,15 @@ function getTrajectoryTypes() {
 }
 
 /**
+ * Client-facing wrapper for getTrajectoryTypes()
+ * Used by Admin tools to populate trajectory dropdowns
+ * @returns {string[]} Array of trajectory names
+ */
+function getTrajectoryTypesForClient() {
+  return getTrajectoryTypes();
+}
+
+/**
  * Generate custom character name from Python format
  * Only converts characters that are actual variants (based on Python tool's comboList)
  * Example: "Red Toad" → "Toad (Red)", but "Baby Mario" stays "Baby Mario"

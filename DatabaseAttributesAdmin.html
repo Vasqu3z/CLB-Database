@@ -402,13 +402,39 @@
       'Captain': { options: ['Yes', 'No'], type: 'dropdown' },
       'Hit Curve': { options: ['Enabled', 'Disabled'], type: 'dropdown' },
       'Pre-Charge': { options: ['Enabled', 'Disabled'], type: 'dropdown' },
-      'Mii': { options: ['Yes', 'No'], type: 'dropdown' }
+      'Mii': { options: ['Yes', 'No'], type: 'dropdown' },
+      'Throwing Side': { options: ['Right', 'Left'], type: 'dropdown' },
+      'Batting Side': { options: ['Right', 'Left'], type: 'dropdown' },
+      'Hitting Trajectory': { options: [], type: 'dropdown' }, // Will be populated dynamically
+      'Star Pitch': { options: ['Standard', 'Fireball', 'Tornado Ball', 'Barrel Ball', 'Banana Ball', 'Heart Ball', 'Flower Ball', 'Phony Ball', 'Liar Ball', 'Rainbow Ball', 'Suction Ball', 'Killer Ball', 'Graffiti Ball'], type: 'dropdown' },
+      'Star Swing': { options: ['Standard', 'Fire Swing', 'Tornado Swing', 'Barrel Swing', 'Banana Swing', 'Heart Swing', 'Flower Swing', 'Phony Swing', 'Liar Swing', 'Egg Swing', 'Cannon Swing', 'Breath Swing', 'Graffiti Swing'], type: 'dropdown' },
+      'Ability': { options: [
+        // Fielding abilities (at top as requested)
+        'None (Fielding)', 'Super Dive', 'Super Jump', 'Tongue Catch', 'Suction Catch',
+        'Magical Catch', 'Piranha Catch', 'Hammer Throw', 'Keeper Catch', 'Clamber',
+        'Ball Dash', 'Laser Beam', 'Quick Throw',
+        // Baserunning abilities
+        'None (Baserunning)', 'Scatter Dive', 'Ink Dive', 'Angry Attack',
+        'Teleport', 'Spin Attack', 'Burrow', 'Enlarge'
+      ], type: 'dropdown' },
+      'Mii Color': { options: ['Red', 'Orange', 'Yellow', 'Light Green', 'Green', 'Blue', 'Light Blue', 'Pink', 'Purple', 'Brown', 'White', 'Black'], type: 'dropdown' }
     };
 
     // ===== INITIALIZATION =====
     window.onload = function() {
       // Disable all selects until data loads
       disableAllSelects();
+
+      // Fetch trajectory types for validation
+      google.script.run
+        .withSuccessHandler(function(trajectoryTypes) {
+          VALIDATION_RULES['Hitting Trajectory'].options = trajectoryTypes;
+        })
+        .withFailureHandler(function(error) {
+          // Fall back to defaults if fetch fails
+          VALIDATION_RULES['Hitting Trajectory'].options = ['Medium', 'High', 'Low'];
+        })
+        .getTrajectoryTypesForClient();
 
       google.script.run
         .withSuccessHandler(populatePlayerDropdowns)
@@ -896,7 +922,8 @@
       html += '</tr>';
 
       var pitchingStats = [
-        {label: 'Star Pitch', key: 'starPitch', isText: true},
+        {label: 'Pre-Charge', key: 'preCharge', isEditable: true},  // Custom field, editable dropdown
+        {label: 'Star Pitch', key: 'starPitch', isEditable: true},   // Editable dropdown
         {label: 'Fastball Speed', key: 'fastballSpeed'},
         {label: 'Curveball Speed', key: 'curveballSpeed'},
         {label: 'Curve', key: 'curve'},
@@ -906,11 +933,15 @@
       pitchingStats.forEach(function(stat) {
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
 
-        if (stat.isText) {
-          // Text value, no highlighting, no editing
-          stats.forEach(function(player) {
+        if (stat.isEditable) {
+          // Editable text field (dropdown)
+          stats.forEach(function(player, index) {
             var value = player[stat.key];
-            html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            if (editMode && stats.length === 1 && index === 0) {
+              html += '<td>' + renderStatCell(stat.label, value, true) + '</td>';
+            } else {
+              html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+            }
           });
           if (editMode && stats.length === 1 && leagueAverages) {
             html += '<td>-</td>';
@@ -984,25 +1015,24 @@
       html += '</tr>';
       
       var hittingStats = [
-        {label: 'Star Swing', key: 'starSwing', isText: true},
-        {label: 'Hit Curve', key: 'hitCurve'},
-        {label: 'Hitting Trajectory', key: 'hittingTrajectory'},
+        {label: 'Star Swing', key: 'starSwing', isEditable: true},         // Editable dropdown
+        {label: 'Hit Curve', key: 'hitCurve', isEditable: true},           // Editable dropdown
+        {label: 'Hitting Trajectory', key: 'hittingTrajectory', isEditable: true}, // Editable dropdown
         {label: 'Slap Hit Contact Size', key: 'slapHitContact'},
         {label: 'Charge Hit Contact Size', key: 'chargeHitContact'},
         {label: 'Slap Hit Power', key: 'slapHitPower'},
-        {label: 'Charge Hit Power', key: 'chargeHitPower'},
-        {label: 'Pre-Charge', key: 'preCharge', isText: true}
+        {label: 'Charge Hit Power', key: 'chargeHitPower'}
+        // Pre-Charge moved to Pitching section
       ];
-      
+
       hittingStats.forEach(function(stat) {
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
 
-        if (stat.isText) {
-          // Text value, no highlighting
+        if (stat.isEditable) {
+          // Editable text field (dropdown)
           stats.forEach(function(player, index) {
             var value = player[stat.key];
-            // Some text fields are editable (Hit Curve, Pre-Charge)
-            if (editMode && stats.length === 1 && index === 0 && (stat.label === 'Hit Curve' || stat.label === 'Pre-Charge')) {
+            if (editMode && stats.length === 1 && index === 0) {
               html += '<td>' + renderStatCell(stat.label, value, true) + '</td>';
             } else {
               html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
