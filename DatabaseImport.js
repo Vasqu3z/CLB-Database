@@ -245,7 +245,7 @@ function getCustomCharacterName(mappings, pythonName) {
  * Show file upload dialog for importing stats preset
  */
 function importChemistryFromStatsPreset() {
-  const html = HtmlService.createHtmlOutputFromFile('ImportStatsPreset')
+  const html = HtmlService.createHtmlOutputFromFile('DatabaseImportApp')
     .setWidth(550)
     .setHeight(300);
   SpreadsheetApp.getUi().showModalDialog(html, 'Import Stats Preset');

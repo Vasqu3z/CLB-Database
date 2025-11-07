@@ -2196,7 +2196,12 @@ def geckoPartExclude():
 def geckoCopy():
 	root.clipboard_clear()
 	root.clipboard_append(geckoDisplay.get("1.0", tk.END).strip())
+	# Force multiple update cycles to ensure clipboard data persists
+	# This prevents clipboard from being cleared when window loses focus
 	root.update()
+	root.update_idletasks()
+	# Keep clipboard alive even after window closes by delaying the update
+	root.after(100, lambda: root.update_idletasks())
 
 # --- ADD THIS NEW SAVE/LOAD LOGIC ---
 
