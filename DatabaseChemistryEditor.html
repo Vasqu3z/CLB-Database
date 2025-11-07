@@ -589,11 +589,14 @@
         let searchTimeout;
 
         select.addEventListener('keydown', function(e) {
-          // Clear previous timeout
-          clearTimeout(searchTimeout);
+          // Only handle single character keys (letters, numbers)
+          if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            e.preventDefault(); // Prevent default select behavior
 
-          // Build search term
-          if (e.key.length === 1) {
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+
+            // Build search term
             searchTerm += e.key.toLowerCase();
 
             // Find matching option
@@ -607,12 +610,12 @@
               // Trigger change event to update character info
               select.dispatchEvent(new Event('change'));
             }
-          }
 
-          // Clear search term after 1 second
-          searchTimeout = setTimeout(function() {
-            searchTerm = '';
-          }, 1000);
+            // Clear search term after 1 second
+            searchTimeout = setTimeout(function() {
+              searchTerm = '';
+            }, 1000);
+          }
         });
       });
     }
