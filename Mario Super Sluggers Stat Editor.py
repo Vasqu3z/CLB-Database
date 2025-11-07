@@ -1,6 +1,50 @@
+"""
+Mario Super Sluggers Stat Editor
+
+A comprehensive character stat and chemistry editor for Mario Super Sluggers (Wii).
+
+Features:
+- Manual stat editing for all 124 characters
+- Chemistry matrix editor (101x101 relationships)
+- Hit trajectory curve editor (24 curves x 25 height values)
+- Randomized stat generation with constraints
+- Gecko code generation for patching the game
+- Stats preset import/export (.txt format, 228 lines)
+- Save/Load configuration (.csv format)
+
+Character Data:
+- 124 total characters (101 regular + 23 Miis + 5 unused slots)
+- 30 stats per character (pitching, batting, fielding, speed, abilities)
+- 101x101 chemistry matrix (symmetric)
+- 6 trajectory types (3 active by default: Medium, High, Low)
+
+File Formats:
+- Stats Preset (.txt): 228-line format for Google Sheets import
+  * Lines 1-101: Chemistry matrix (101 rows)
+  * Lines 102-202: Character stats (101 characters)
+  * Lines 203-226: Trajectory height data (24 curves)
+  * Line 227: Trajectory names (6 comma-separated)
+  * Line 228: Trajectory usage flags (6 binary)
+
+- Character Selection (.csv): Editor save format
+  * Header row + 124 character rows
+  * Each row: name + 30 stats + 101 chemistry values
+
+Usage:
+1. Edit stats manually or randomize with constraints
+2. Modify chemistry relationships
+3. Adjust trajectory curves
+4. Generate Gecko code or export stats preset
+5. Save configuration for later reuse
+
+Clipboard Fix:
+The "Copy to Clipboard" button uses special Tkinter handling to ensure
+clipboard persistence after window closes. See geckoCopy() for details.
+"""
+
 import tkinter as tk
 from tkinter import ttk
-from random import random,randint
+from random import random, randint
 from numpy import random as nprandom
 from functools import partial
 from tkinter import filedialog
@@ -8,8 +52,13 @@ import tkinter.messagebox as messagebox
 import re
 import os
 
-#Big Lists
+# ===== CHARACTER DATA =====
 
+# Full list of all 124 characters in the game (internal order)
+# Used for stat array indexing and display
+# Index 0-100: Regular characters
+# Index 101-123: Mii characters (12 male + 12 female variations)
+# Index 119-123: Unused character slots
 charList = ["Mario", "Luigi", "Donkey Kong", "Diddy Kong", "Peach", "Daisy", 
 			"Green Yoshi", "Baby Mario", "Baby Luigi", "Bowser", "Wario",
 			"Waluigi", "Green Koopa Troopa", "Red Toad", "Boo", "Toadette",
@@ -36,6 +85,11 @@ charList = ["Mario", "Luigi", "Donkey Kong", "Diddy Kong", "Peach", "Daisy",
 			"Light Green Mii (F)", "Green Mii (F)", "Blue Mii (F)",
 			"Light Blue Mii (F)", "Pink Mii (F)", "Purple Mii (F)", 
 			"Brown Mii (F)", "White Mii (F)", "Black Mii (F)"]
+
+# Hierarchical character list for dropdown menus
+# Characters in groups are indented with spaces (e.g., "  Boomerang Bro")
+# Groups are collapsed in UI, individual characters are selectable
+# Used by getGroupSize() to determine how many characters belong to a group
 comboList = ["Baby DK", "Baby Daisy", "Baby Luigi", "Baby Mario", "Baby Peach",
 			 "Birdo", "Blooper", "Boo", "Bowser", "Bowser Jr.", "Bros",
 			 "  Boomerang Bro", "  Fire Bro", "  Hammer Bro", "Daisy",
@@ -69,6 +123,13 @@ comboList = ["Baby DK", "Baby Daisy", "Baby Luigi", "Baby Mario", "Baby Peach",
 			 "  White Mii (F)", "Yellow Miis", "  Yellow Mii (M)",
 			 "  Yellow Mii (F)", "Unused Yoshi 2", "Unused Yoshi",
 			 "Unused Toad", "Unused Pianta", "Unused Kritter", "Unused Koopa"]
+
+# ===== STAT DEFINITIONS =====
+
+# Internal names for all 30 stat fields in the game's data structure
+# Index matches the position in character stat arrays (defaultStat, changedStat)
+# Note: "???" at index 3 is unknown/unused field
+# Note: "NOT stamina" at index 25 is NOT the actual stamina stat (that's index 28)
 statsList = ["pitching arm","batting arm","character class","???","weight",
 			 "captain","star pitch","star swing","fielding ability",
 			 "baserunning ability","slap size","charge size","slap power",
@@ -76,23 +137,55 @@ statsList = ["pitching arm","batting arm","character class","???","weight",
 			 "displayed pitching","displayed batting","displayed fielding",
 			 "dis speed","curveball speed","charge pitch speed","curve",
 			 "NOT stamina","traj","hit curve","stamina","star pitch type"]
-trajAllList = ["Medium","High","Low","Group 3","Group 4","Group 5"]
-trajUsed = [1,1,1,0,0,0]
-trajList = ["Medium","High","Low"]
 
+# ===== TRAJECTORY CONFIGURATION =====
+
+# All 6 possible trajectory groups (3 are used by default)
+# Can be renamed and enabled/disabled in the trajectory editor
+# Default: Medium (0), High (1), Low (2) are active
+trajAllList = ["Medium", "High", "Low", "Group 3", "Group 4", "Group 5"]
+
+# Binary flags for which trajectory groups are enabled (1) or disabled (0)
+# Matches trajAllList indices
+trajUsed = [1, 1, 1, 0, 0, 0]
+
+# Currently active trajectory names (filtered from trajAllList by trajUsed)
+# Dynamically updated when enabling/disabling trajectories
+trajList = ["Medium", "High", "Low"]
+
+# ===== ABILITY AND CLASS LISTS =====
+
+# Special fielding abilities (13 types)
+# Index 0 = None, indices 1-12 are special abilities
 fieldingAbilitiesList = ["None","Super Dive","Super Jump","Tongue Catch","Suction Catch",
 						 "Magical Catch","Piranha Catch","Hammer Throw","Keeper Catch",
 						 "Clamber","Ball Dash","Laser Beam","Quick Throw"]
+# Special baserunning abilities (8 types)
+# Index 0 = None, indices 1-7 are special abilities
 baserunningAbilitiesList = ["None","Scatter Dive","Ink Dive","Angry Attack",
 							"Teleport","Spin Attack","Burrow","Enlarge"]
+
+# Character class types (4 types)
 classList=["Balanced","Power","Speed","Technique"]
+
+# Star pitch types (13 types)
 starPitchList = ["Standard","Fireball","Tornado Ball","Barrel Ball","Banana Ball",
 				 "Heart Ball","Flower Ball","Phony Ball","Liar Ball",
 				 "Rainbow Ball","Suction Ball", "Killer Ball","Graffiti Ball"]
+# Star swing types (13 types, matches star pitch list)
 starSwingList = ["Standard","Fire Swing","Tornado Swing","Barrel Swing","Banana Swing",
 				 "Heart Swing","Flower Swing","Phony Swing","Liar Swing",
 				 "Egg Swing","Cannon Swing","Breath Swing","Graffiti Swing"]
+
+# Star pitch type modifiers (4 types)
 starPitchTypeList = ["None","Breaking Ball","Fastball","Change-Up"]
+
+# ===== DEFAULT DATA MATRICES =====
+
+# Default chemistry matrix (101x101)
+# Values: 0 = negative chemistry, 1 = neutral, 2 = positive
+# Symmetric matrix (chemistry[i][j] == chemistry[j][i])
+# Rows/columns match charList indices (first 101 characters only, excludes Miis)
 defaultChem = [[1,2,1,1,2,1,2,1,1,0,0,1,1,1,1,1,1,1,1,0,1,2,2,2,2,2,2,1,1,1,1,
 				1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,2,2,2,2,2,2,2,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,
@@ -497,9 +590,17 @@ defaultChem = [[1,2,1,1,2,1,2,1,1,0,0,1,1,1,1,1,1,1,1,0,1,2,2,2,2,2,2,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,
 				1,1,1,1,1,1,1,1]]
+
+# Active chemistry data (modified during editing)
+# Deep copy of defaultChem, updated by user actions
+# Can be reset to defaults or saved/loaded from file
 changedChem=[]
 for L in defaultChem:
 	changedChem.append(L.copy())
+
+# Default stat matrix (124 characters x 30 stats each)
+# Each row is a character, each column is a stat (matches statsList)
+# Stats are in the order defined by statsList (pitching arm, batting arm, etc.)
 defaultStat = [[0,0,0,2,2,1,1,1,0,7,75,55,50,70,30,70,70,60,6,7,6,7,122,139,70,50,0,0,87,0],
 			   [0,1,2,2,2,1,2,2,2,0,70,50,40,60,30,70,60,70,6,6,7,7,124,138,60,50,0,0,70,0],
 			   [0,1,1,0,4,1,3,3,9,0,50,30,60,90,10,20,85,30,6,9,3,2,136,150,30,75,1,0,90,0],
@@ -601,9 +702,26 @@ defaultStat = [[0,0,0,2,2,1,1,1,0,7,75,55,50,70,30,70,70,60,6,7,6,7,122,139,70,5
 			   [0,1,0,2,2,0,0,0,12,0,65,45,45,65,40,60,60,60,6,6,6,6,130,142,50,40,2,0,75,2],
 			   [0,1,0,2,2,0,0,0,12,0,65,45,45,65,40,60,60,60,6,6,6,6,130,142,50,40,2,0,75,2],
 			   [0,1,0,2,2,0,0,0,12,0,65,45,45,65,40,60,60,60,6,6,6,6,130,142,50,40,2,0,75,1]]
+
+# Active stat data (modified during editing)
+# Deep copy of defaultStat, updated by user actions
+# Can be reset to defaults, randomized, or saved/loaded from file
 changedStat=[]
 for L in defaultStat:
 	changedStat.append(L.copy())
+
+# Default trajectory height data (24 trajectory curves x 25 height values)
+# 6 trajectories x 4 ball types (normal, slice, charge, both) = 24 total curves
+# Each curve has 25 height values representing the ball's arc (0-100%)
+# Values should sum to 100 for each curve (game enforces this)
+#
+# Curve indices:
+# 0-3:   Medium trajectory (normal, slice, charge, both)
+# 4-7:   High trajectory (normal, slice, charge, both)
+# 8-11:  Low trajectory (normal, slice, charge, both)
+# 12-15: Group 3 (if enabled)
+# 16-19: Group 4 (if enabled)
+# 20-23: Group 5 (if enabled)
 defaultTraj = [[0,10,20,30,40,20,20,20,20,20,10,25,30,25,10,20,20,20,20,20,40,30,20,10,0],
 			   [0,10,20,30,40,10,35,30,15,10,5,25,40,25,5,10,35,30,15,10,40,30,20,10,0],
 			   [20,5,0,5,70,15,20,30,30,5,20,35,15,15,15,15,30,30,20,5,70,5,0,5,20],
@@ -628,21 +746,52 @@ defaultTraj = [[0,10,20,30,40,20,20,20,20,20,10,25,30,25,10,20,20,20,20,20,40,30
 			   [20,20,20,20,20,10,20,20,20,30,10,20,20,20,30,10,20,20,20,30,20,20,20,20,20],
 			   [20,20,20,20,20,30,20,20,20,10,30,20,20,20,10,30,20,20,20,10,20,20,20,20,20],
 			   [20,20,20,20,20,30,20,20,20,10,30,20,20,20,10,30,20,20,20,10,20,20,20,20,20]]
+
+# Active trajectory data (modified during editing)
+# Deep copy of defaultTraj, updated by user actions
+# Can be reset to defaults or saved/loaded from file
 changedTraj=[]
 for L in defaultTraj:
 	changedTraj.append(L.copy())
 
+# ===== HELPER FUNCTIONS =====
+
 def getGroupSize(n):
+	"""
+	Get the number of characters in a character group.
+
+	Some characters are grouped in the UI (e.g., "Dry Bones" has 4 variants).
+	This function returns how many individual characters belong to that group.
+
+	Args:
+		n: Index in comboList (hierarchical character list)
+
+	Returns:
+		int: Number of characters in the group
+			1 = single character (not a group)
+			2-6 = group with that many members
+
+	Examples:
+		getGroupSize(10) -> 3  # "Bros" group has 3 members
+		getGroupSize(75) -> 6  # "Yoshis" group has 6 members
+		getGroupSize(0) -> 1   # "Baby DK" is a single character
+	"""
+	# Two-member groups (twins, pairs)
 	if n==27 or n==30 or (n>=82 and n%3==1 and n<=115):
 		return 2
+	# Three-member groups
 	if n==10 or n==46 or n==53:
 		return 3
+	# Four-member groups
 	if n==18 or n==33 or n==39:
 		return 4
+	# Five-member groups
 	if n==57 or n==64:
 		return 5
+	# Six-member groups
 	if n==75:
 		return 6
+	# Single character (default)
 	return 1
 
 #Chem functions
