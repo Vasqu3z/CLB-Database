@@ -251,18 +251,19 @@
       max-width: 80px;
       margin: 0 auto;
       text-align: center;
+      -moz-appearance: textfield; /* Firefox: remove spinner */
     }
 
-    /* Hide spinner buttons by default, show on hover */
+    /* Remove spinner buttons from layout by default, add them back on hover */
     .stat-input[type="number"]::-webkit-outer-spin-button,
     .stat-input[type="number"]::-webkit-inner-spin-button {
-      opacity: 0;
-      transition: opacity 0.2s;
+      -webkit-appearance: none;
+      margin: 0;
     }
 
     .stat-input[type="number"]:hover::-webkit-outer-spin-button,
     .stat-input[type="number"]:hover::-webkit-inner-spin-button {
-      opacity: 1;
+      -webkit-appearance: auto;
     }
 
     .stat-input:focus {
@@ -1039,23 +1040,15 @@
 
       html += '</tr></thead><tbody>';
       
-      // Add Pitching Overall at the top
-      var pitchingOverallLabel = 'Pitching Overall';
-      if (editMode && stats.length === 1) {
-        pitchingOverallLabel += getValidationRangeLabel('Pitching Overall');
-      }
-      html += '<tr class="category-overall"><td class="stat-label">' + pitchingOverallLabel + '</td>';
+      // Add Pitching Overall at the top (read-only - only editable in Overall Ratings section)
+      html += '<tr class="category-overall"><td class="stat-label">Pitching Overall</td>';
       var pitchingValues = stats.map(function(p) { return p.pitchingOverall; });
       var maxPitchingValue = Math.max.apply(null, pitchingValues);
 
       stats.forEach(function(player, index) {
         var value = player.pitchingOverall;
-        if (editMode && stats.length === 1 && index === 0) {
-          html += '<td>' + renderStatCell('Pitching Overall', value, true) + '</td>';
-        } else {
-          var cellClass = (value === maxPitchingValue && maxPitchingValue > 0) ? ' class="best-value"' : '';
-          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
-        }
+        var cellClass = (value === maxPitchingValue && maxPitchingValue > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
       });
       if (editMode && stats.length === 1) {
         if (classAverages) {
@@ -1166,23 +1159,15 @@
 
       html += '</tr></thead><tbody>';
 
-      // Add Batting Overall at the top
-      var battingOverallLabel = 'Batting Overall';
-      if (editMode && stats.length === 1) {
-        battingOverallLabel += getValidationRangeLabel('Batting Overall');
-      }
-      html += '<tr class="category-overall"><td class="stat-label">' + battingOverallLabel + '</td>';
+      // Add Batting Overall at the top (read-only - only editable in Overall Ratings section)
+      html += '<tr class="category-overall"><td class="stat-label">Batting Overall</td>';
       var battingValues = stats.map(function(p) { return p.battingOverall; });
       var maxBattingValue = Math.max.apply(null, battingValues);
 
       stats.forEach(function(player, index) {
         var value = player.battingOverall;
-        if (editMode && stats.length === 1 && index === 0) {
-          html += '<td>' + renderStatCell('Batting Overall', value, true) + '</td>';
-        } else {
-          var cellClass = (value === maxBattingValue && maxBattingValue > 0) ? ' class="best-value"' : '';
-          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
-        }
+        var cellClass = (value === maxBattingValue && maxBattingValue > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
       });
       if (editMode && stats.length === 1) {
         if (classAverages) {
@@ -1295,23 +1280,15 @@
 
       html += '</tr></thead><tbody>';
 
-      // Add Fielding Overall at the top
-      var fieldingOverallLabel = 'Fielding Overall';
-      if (editMode && stats.length === 1) {
-        fieldingOverallLabel += getValidationRangeLabel('Fielding Overall');
-      }
-      html += '<tr class="category-overall"><td class="stat-label">' + fieldingOverallLabel + '</td>';
+      // Add Fielding Overall at the top (read-only - only editable in Overall Ratings section)
+      html += '<tr class="category-overall"><td class="stat-label">Fielding Overall</td>';
       var fieldingValues = stats.map(function(p) { return p.fieldingOverall; });
       var maxFieldingValue = Math.max.apply(null, fieldingValues);
 
       stats.forEach(function(player, index) {
         var value = player.fieldingOverall;
-        if (editMode && stats.length === 1 && index === 0) {
-          html += '<td>' + renderStatCell('Fielding Overall', value, true) + '</td>';
-        } else {
-          var cellClass = (value === maxFieldingValue && maxFieldingValue > 0) ? ' class="best-value"' : '';
-          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
-        }
+        var cellClass = (value === maxFieldingValue && maxFieldingValue > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
       });
       if (editMode && stats.length === 1) {
         if (classAverages) {
@@ -1396,23 +1373,15 @@
 
       html += '</tr></thead><tbody>';
 
-      // Add Speed Overall at the top
-      var speedOverallLabel = 'Speed Overall';
-      if (editMode && stats.length === 1) {
-        speedOverallLabel += getValidationRangeLabel('Speed Overall');
-      }
-      html += '<tr class="category-overall"><td class="stat-label">' + speedOverallLabel + '</td>';
+      // Add Speed Overall at the top (read-only - only editable in Overall Ratings section)
+      html += '<tr class="category-overall"><td class="stat-label">Speed Overall</td>';
       var speedOverallValues = stats.map(function(p) { return p.speedOverall; });
       var maxSpeedOverall = Math.max.apply(null, speedOverallValues);
 
       stats.forEach(function(player, index) {
         var value = player.speedOverall;
-        if (editMode && stats.length === 1 && index === 0) {
-          html += '<td>' + renderStatCell('Speed Overall', value, true) + '</td>';
-        } else {
-          var cellClass = (value === maxSpeedOverall && maxSpeedOverall > 0) ? ' class="best-value"' : '';
-          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
-        }
+        var cellClass = (value === maxSpeedOverall && maxSpeedOverall > 0) ? ' class="best-value"' : '';
+        html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
       });
       if (editMode && stats.length === 1) {
         if (classAverages) {

@@ -504,18 +504,29 @@ function saveCharacterAttributes(playerName, modifiedFields) {
       throw new Error(config.SHEETS.ATTRIBUTES + ' sheet not found');
     }
 
-    // Find the player's row
-    var data = getAttributeData();
-    if (!data || !data.map[playerName]) {
-      throw new Error('Player not found: ' + playerName);
+    var COLS = config.ATTRIBUTES_CONFIG.COLUMNS;
+
+    // CRITICAL: Read directly from sheet to find current row (don't use cache)
+    // This ensures we write to the correct row even after config imports
+    var lastRow = attributeSheet.getLastRow();
+    var nameColumn = COLS.NAME + 1; // Convert 0-based to 1-based
+    var names = attributeSheet.getRange(config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW, nameColumn,
+                                        lastRow - config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW + 1, 1).getValues();
+
+    // Find the character's current row
+    var rowNumber = -1;
+    for (var i = 0; i < names.length; i++) {
+      if (names[i][0] === playerName) {
+        rowNumber = config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW + i;
+        break;
+      }
     }
 
-    // Get the player's row number (1-based)
-    var playerIndex = data.players.indexOf(playerName);
-    var rowNumber = config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW + playerIndex;
+    if (rowNumber === -1) {
+      throw new Error('Player not found in sheet: ' + playerName);
+    }
 
     // Map field labels to column indices
-    var COLS = config.ATTRIBUTES_CONFIG.COLUMNS;
     var fieldToColumn = {
       'Weight': COLS.WEIGHT + 1,
       'Curve': COLS.CURVE + 1,
