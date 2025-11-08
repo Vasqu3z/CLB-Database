@@ -250,6 +250,19 @@
     .stat-input[type="number"] {
       max-width: 80px;
       margin: 0 auto;
+      text-align: center;
+    }
+
+    /* Hide spinner buttons by default, show on hover */
+    .stat-input[type="number"]::-webkit-outer-spin-button,
+    .stat-input[type="number"]::-webkit-inner-spin-button {
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .stat-input[type="number"]:hover::-webkit-outer-spin-button,
+    .stat-input[type="number"]:hover::-webkit-inner-spin-button {
+      opacity: 1;
     }
 
     .stat-input:focus {
@@ -366,6 +379,16 @@
       <select id="player5">
         <option value="">-- Select Player --</option>
       </select>
+
+      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="excludeMiis" checked style="margin-right: 8px; cursor: pointer;">
+          <span style="font-weight: normal;">Exclude Miis from averages</span>
+        </label>
+        <div style="font-size: 11px; color: #5f6368; margin-left: 24px; margin-top: 4px;">
+          Miis are custom characters whose stats are balanced separately from the main cast
+        </div>
+      </div>
     </div>
     
     <div class="button-group">
@@ -552,6 +575,9 @@
       var player4 = document.getElementById('player4').value;
       var player5 = document.getElementById('player5').value;
 
+      // Get the exclude Miis checkbox value
+      var excludeMiis = document.getElementById('excludeMiis').checked;
+
       // Allow single player selection
       if (!player1) {
         showError('Please select at least 1 player.');
@@ -583,14 +609,14 @@
                 google.script.run
                   .withSuccessHandler(resolve)
                   .withFailureHandler(reject)
-                  .getLeagueAverages();
+                  .getLeagueAverages(excludeMiis);
               });
 
               var classPromise = new Promise(function(resolve, reject) {
                 google.script.run
                   .withSuccessHandler(resolve)
                   .withFailureHandler(reject)
-                  .getClassAverages(playerClass);
+                  .getClassAverages(playerClass, excludeMiis);
               });
 
               // Wait for both, then display
@@ -803,6 +829,26 @@
       return classAverages[leagueAverageKeyMap[key]] || '-';
     }
 
+    // Get validation range label for a field
+    function getValidationRangeLabel(fieldLabel) {
+      var rule = VALIDATION_RULES[fieldLabel];
+      if (!rule) return '';
+
+      if (rule.type === 'number') {
+        return ' <span style="color: #5f6368; font-size: 11px; font-weight: normal;">(' + rule.min + '-' + rule.max + ')</span>';
+      } else if (rule.type === 'dropdown') {
+        // For dropdowns with 2-3 options, show them all
+        if (rule.options.length <= 3) {
+          return ' <span style="color: #5f6368; font-size: 11px; font-weight: normal;">(' + rule.options.join('/') + ')</span>';
+        } else {
+          // For dropdowns with many options, just indicate it's a dropdown
+          return ' <span style="color: #5f6368; font-size: 11px; font-weight: normal;">(Dropdown)</span>';
+        }
+      }
+
+      return '';
+    }
+
     function displayResults(stats) {
       if (!stats || stats.length === 0) {
         showError('No data found for selected players.');
@@ -857,7 +903,11 @@
       ];
       
       basicInfo.forEach(function(info) {
-        html += '<tr><td class="stat-label">' + info.label + '</td>';
+        var labelWithRange = info.label;
+        if (editMode && stats.length === 1) {
+          labelWithRange += getValidationRangeLabel(info.label);
+        }
+        html += '<tr><td class="stat-label">' + labelWithRange + '</td>';
         stats.forEach(function(player, index) {
           var value = player[info.key];
           if (editMode && stats.length === 1 && index === 0) {
@@ -909,7 +959,11 @@
       ];
       
       overallStats.forEach(function(stat) {
-        html += '<tr class="overall-row"><td class="stat-label">' + stat.label + '</td>';
+        var labelWithRange = stat.label;
+        if (editMode && stats.length === 1) {
+          labelWithRange += getValidationRangeLabel(stat.label);
+        }
+        html += '<tr class="overall-row"><td class="stat-label">' + labelWithRange + '</td>';
         var values = stats.map(function(p) { return p[stat.key]; });
         var maxValue = Math.max.apply(null, values);
 
@@ -986,7 +1040,11 @@
       html += '</tr></thead><tbody>';
       
       // Add Pitching Overall at the top
-      html += '<tr class="category-overall"><td class="stat-label">Pitching Overall</td>';
+      var pitchingOverallLabel = 'Pitching Overall';
+      if (editMode && stats.length === 1) {
+        pitchingOverallLabel += getValidationRangeLabel('Pitching Overall');
+      }
+      html += '<tr class="category-overall"><td class="stat-label">' + pitchingOverallLabel + '</td>';
       var pitchingValues = stats.map(function(p) { return p.pitchingOverall; });
       var maxPitchingValue = Math.max.apply(null, pitchingValues);
 
@@ -1019,7 +1077,11 @@
       ];
 
       pitchingStats.forEach(function(stat) {
-        html += '<tr><td class="stat-label">' + stat.label + '</td>';
+        var labelWithRange = stat.label;
+        if (editMode && stats.length === 1) {
+          labelWithRange += getValidationRangeLabel(stat.label);
+        }
+        html += '<tr><td class="stat-label">' + labelWithRange + '</td>';
 
         if (stat.isEditable) {
           // Editable text field (dropdown)
@@ -1092,14 +1154,24 @@
         html += '<th class="player-header">' + player.name + '</th>';
       });
 
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<th class="player-header league-header">League Average</th>';
+      // Add class and league average columns in edit mode
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<th class="player-header league-header">Class Average</th>';
+        }
+        if (leagueAverages) {
+          html += '<th class="player-header league-header">League Average</th>';
+        }
       }
 
       html += '</tr></thead><tbody>';
 
       // Add Batting Overall at the top
-      html += '<tr class="category-overall"><td class="stat-label">Batting Overall</td>';
+      var battingOverallLabel = 'Batting Overall';
+      if (editMode && stats.length === 1) {
+        battingOverallLabel += getValidationRangeLabel('Batting Overall');
+      }
+      html += '<tr class="category-overall"><td class="stat-label">' + battingOverallLabel + '</td>';
       var battingValues = stats.map(function(p) { return p.battingOverall; });
       var maxBattingValue = Math.max.apply(null, battingValues);
 
@@ -1134,7 +1206,11 @@
       ];
 
       hittingStats.forEach(function(stat) {
-        html += '<tr><td class="stat-label">' + stat.label + '</td>';
+        var labelWithRange = stat.label;
+        if (editMode && stats.length === 1) {
+          labelWithRange += getValidationRangeLabel(stat.label);
+        }
+        html += '<tr><td class="stat-label">' + labelWithRange + '</td>';
 
         if (stat.isEditable) {
           // Editable text field (dropdown)
@@ -1207,14 +1283,24 @@
         html += '<th class="player-header">' + player.name + '</th>';
       });
 
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<th class="player-header league-header">League Average</th>';
+      // Add class and league average columns in edit mode
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<th class="player-header league-header">Class Average</th>';
+        }
+        if (leagueAverages) {
+          html += '<th class="player-header league-header">League Average</th>';
+        }
       }
 
       html += '</tr></thead><tbody>';
 
       // Add Fielding Overall at the top
-      html += '<tr class="category-overall"><td class="stat-label">Fielding Overall</td>';
+      var fieldingOverallLabel = 'Fielding Overall';
+      if (editMode && stats.length === 1) {
+        fieldingOverallLabel += getValidationRangeLabel('Fielding Overall');
+      }
+      html += '<tr class="category-overall"><td class="stat-label">' + fieldingOverallLabel + '</td>';
       var fieldingValues = stats.map(function(p) { return p.fieldingOverall; });
       var maxFieldingValue = Math.max.apply(null, fieldingValues);
 
@@ -1243,7 +1329,11 @@
       ];
 
       fieldingStats.forEach(function(stat) {
-        html += '<tr><td class="stat-label">' + stat.label + '</td>';
+        var labelWithRange = stat.label;
+        if (editMode && stats.length === 1) {
+          labelWithRange += getValidationRangeLabel(stat.label);
+        }
+        html += '<tr><td class="stat-label">' + labelWithRange + '</td>';
         var values = stats.map(function(p) { return p[stat.key]; });
         var maxValue = Math.max.apply(null, values);
 
@@ -1256,8 +1346,13 @@
             html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
           }
         });
-        if (editMode && stats.length === 1 && leagueAverages) {
-          html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+        if (editMode && stats.length === 1) {
+          if (classAverages) {
+            html += '<td>' + getClassAverage(stat.key) + '</td>';
+          }
+          if (leagueAverages) {
+            html += '<td>' + getLeagueAverage(stat.key) + '</td>';
+          }
         }
         html += '</tr>';
       });
@@ -1289,14 +1384,24 @@
         html += '<th class="player-header">' + player.name + '</th>';
       });
 
-      if (editMode && stats.length === 1 && leagueAverages) {
-        html += '<th class="player-header league-header">League Average</th>';
+      // Add class and league average columns in edit mode
+      if (editMode && stats.length === 1) {
+        if (classAverages) {
+          html += '<th class="player-header league-header">Class Average</th>';
+        }
+        if (leagueAverages) {
+          html += '<th class="player-header league-header">League Average</th>';
+        }
       }
 
       html += '</tr></thead><tbody>';
 
       // Add Speed Overall at the top
-      html += '<tr class="category-overall"><td class="stat-label">Speed Overall</td>';
+      var speedOverallLabel = 'Speed Overall';
+      if (editMode && stats.length === 1) {
+        speedOverallLabel += getValidationRangeLabel('Speed Overall');
+      }
+      html += '<tr class="category-overall"><td class="stat-label">' + speedOverallLabel + '</td>';
       var speedOverallValues = stats.map(function(p) { return p.speedOverall; });
       var maxSpeedOverall = Math.max.apply(null, speedOverallValues);
 
@@ -1319,7 +1424,11 @@
       }
       html += '</tr>';
 
-      html += '<tr><td class="stat-label">Speed</td>';
+      var speedLabel = 'Speed';
+      if (editMode && stats.length === 1) {
+        speedLabel += getValidationRangeLabel('Speed');
+      }
+      html += '<tr><td class="stat-label">' + speedLabel + '</td>';
       var speedValues = stats.map(function(p) { return p.speed; });
       var maxSpeed = Math.max.apply(null, speedValues);
 
@@ -1342,7 +1451,11 @@
       }
       html += '</tr>';
 
-      html += '<tr><td class="stat-label">Bunting</td>';
+      var buntingLabel = 'Bunting';
+      if (editMode && stats.length === 1) {
+        buntingLabel += getValidationRangeLabel('Bunting');
+      }
+      html += '<tr><td class="stat-label">' + buntingLabel + '</td>';
       var buntingValues = stats.map(function(p) { return p.bunting; });
       var maxBunting = Math.max.apply(null, buntingValues);
 

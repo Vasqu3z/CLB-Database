@@ -171,9 +171,15 @@ function getPlayerAttributes(playerNames) {
 /**
  * Calculate averages for a specific character class
  * @param {string} characterClass - The class to calculate averages for (Balanced, Power, Speed, Technique)
+ * @param {boolean} excludeMiis - Whether to exclude Mii characters from averages (default: true)
  * @returns {Object} Object with average values for each stat for the class
  */
-function getClassAverages(characterClass) {
+function getClassAverages(characterClass, excludeMiis) {
+  // Default to excluding Miis
+  if (excludeMiis === undefined || excludeMiis === null) {
+    excludeMiis = true;
+  }
+
   try {
     var data = getAttributeData();
     if (!data) return null;
@@ -207,6 +213,11 @@ function getClassAverages(characterClass) {
     for (var playerName in data.map) {
       if (data.map.hasOwnProperty(playerName)) {
         var row = data.map[playerName];
+
+        // Skip Miis if excludeMiis is true
+        if (excludeMiis && row[COLS.MII] === 'Yes') {
+          continue;
+        }
 
         // Only include players from the specified class
         if (row[COLS.CHARACTER_CLASS] === characterClass) {
@@ -275,9 +286,15 @@ function getClassAverages(characterClass) {
 
 /**
  * Calculate league-wide averages for all numeric stats
+ * @param {boolean} excludeMiis - Whether to exclude Mii characters from averages (default: true)
  * @returns {Object} Object with average values for each stat
  */
-function getLeagueAverages() {
+function getLeagueAverages(excludeMiis) {
+  // Default to excluding Miis
+  if (excludeMiis === undefined || excludeMiis === null) {
+    excludeMiis = true;
+  }
+
   try {
     var data = getAttributeData();
     if (!data) return null;
@@ -311,6 +328,12 @@ function getLeagueAverages() {
     for (var playerName in data.map) {
       if (data.map.hasOwnProperty(playerName)) {
         var row = data.map[playerName];
+
+        // Skip Miis if excludeMiis is true
+        if (excludeMiis && row[COLS.MII] === 'Yes') {
+          continue;
+        }
+
         statTotals.weight += row[COLS.WEIGHT] || 0;
         statTotals.pitchingOverall += row[COLS.PITCHING_OVERALL] || 0;
         statTotals.battingOverall += row[COLS.BATTING_OVERALL] || 0;
