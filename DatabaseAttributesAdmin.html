@@ -349,6 +349,92 @@
       font-style: italic;
       margin-top: 10px;
     }
+
+    .dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .dialog-overlay.show {
+      display: flex;
+    }
+
+    .dialog-box {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .dialog-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .dialog-message {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .dialog-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .dialog-btn.primary {
+      background: #1a73e8;
+      color: white;
+    }
+
+    .dialog-btn.primary:hover {
+      background: #1557b0;
+    }
+
+    .dialog-btn.secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .dialog-btn.secondary:hover {
+      background: #d0d0d0;
+    }
   </style>
 </head>
 <body>
@@ -1040,7 +1126,7 @@
 
       html += '</tr></thead><tbody>';
       
-      // Add Pitching Overall at the top (read-only - only editable in Overall Ratings section)
+      // Add Pitching Overall at top of section
       html += '<tr class="category-overall"><td class="stat-label">Pitching Overall</td>';
       var pitchingValues = stats.map(function(p) { return p.pitchingOverall; });
       var maxPitchingValue = Math.max.apply(null, pitchingValues);
@@ -1159,7 +1245,7 @@
 
       html += '</tr></thead><tbody>';
 
-      // Add Batting Overall at the top (read-only - only editable in Overall Ratings section)
+      // Add Batting Overall at top of section
       html += '<tr class="category-overall"><td class="stat-label">Batting Overall</td>';
       var battingValues = stats.map(function(p) { return p.battingOverall; });
       var maxBattingValue = Math.max.apply(null, battingValues);
@@ -1280,7 +1366,7 @@
 
       html += '</tr></thead><tbody>';
 
-      // Add Fielding Overall at the top (read-only - only editable in Overall Ratings section)
+      // Add Fielding Overall at top of section
       html += '<tr class="category-overall"><td class="stat-label">Fielding Overall</td>';
       var fieldingValues = stats.map(function(p) { return p.fieldingOverall; });
       var maxFieldingValue = Math.max.apply(null, fieldingValues);
@@ -1373,7 +1459,7 @@
 
       html += '</tr></thead><tbody>';
 
-      // Add Speed Overall at the top (read-only - only editable in Overall Ratings section)
+      // Add Speed Overall at top of section
       html += '<tr class="category-overall"><td class="stat-label">Speed Overall</td>';
       var speedOverallValues = stats.map(function(p) { return p.speedOverall; });
       var maxSpeedOverall = Math.max.apply(null, speedOverallValues);
@@ -1550,7 +1636,14 @@
     }
 
     function showDialog(title, message) {
-      alert(title + '\n\n' + message);
+      document.getElementById('dialogTitle').textContent = title;
+      document.getElementById('dialogMessage').textContent = message;
+      document.getElementById('dialogButtons').innerHTML = '<button class="dialog-btn primary" onclick="hideDialog()">OK</button>';
+      document.getElementById('dialogOverlay').classList.add('show');
+    }
+
+    function hideDialog() {
+      document.getElementById('dialogOverlay').classList.remove('show');
     }
 
     function clearSelection() {
@@ -1565,9 +1658,20 @@
     }
     
     function showError(error) {
-      document.getElementById('results').innerHTML = 
+      document.getElementById('results').innerHTML =
         '<div class="error">⚠️ Error: ' + error + '</div>';
     }
   </script>
+
+  <!-- Dialog Overlay -->
+  <div id="dialogOverlay" class="dialog-overlay">
+    <div class="dialog-box">
+      <div class="dialog-title" id="dialogTitle">Dialog Title</div>
+      <div class="dialog-message" id="dialogMessage">Dialog message goes here.</div>
+      <div class="dialog-buttons" id="dialogButtons">
+        <button class="dialog-btn primary" onclick="hideDialog()">OK</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

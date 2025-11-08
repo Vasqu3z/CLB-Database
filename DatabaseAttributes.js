@@ -45,32 +45,30 @@ function getAttributeData() {
     return null;
   }
   
-  // Read ALL data in ONE operation
+  // Read all attribute data
   var allData = attributeSheet.getRange(
     config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW,
     1,
     lastRow - config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW + 1,
     config.ATTRIBUTES_CONFIG.TOTAL_COLUMNS
   ).getValues();
-  
-  // Build a map of player name -> attributes
+
+  // Build map of player name to attributes
   var playerMap = {};
   var playerNames = [];
-  
+
   for (var i = 0; i < allData.length; i++) {
     var name = String(allData[i][0]).trim();
     if (!name) continue;
-    
+
     playerNames.push(name);
     playerMap[name] = allData[i];
   }
-  
-  // Sort player names
+
   playerNames.sort(function(a, b) {
     return a.localeCompare(b);
   });
-  
-  // Cache the result
+
   attributeCache = {
     map: playerMap,
     players: playerNames,
@@ -214,12 +212,10 @@ function getClassAverages(characterClass, excludeMiis) {
       if (data.map.hasOwnProperty(playerName)) {
         var row = data.map[playerName];
 
-        // Skip Miis if excludeMiis is true
         if (excludeMiis && row[COLS.MII] === 'Yes') {
           continue;
         }
 
-        // Only include players from the specified class
         if (row[COLS.CHARACTER_CLASS] === characterClass) {
           statTotals.weight += row[COLS.WEIGHT] || 0;
           statTotals.pitchingOverall += row[COLS.PITCHING_OVERALL] || 0;
@@ -245,7 +241,6 @@ function getClassAverages(characterClass, excludeMiis) {
 
     if (playerCount === 0) return null;
 
-    // Calculate averages
     var averages = {};
     for (var stat in statTotals) {
       if (statTotals.hasOwnProperty(stat)) {
@@ -332,7 +327,6 @@ function getLeagueAverages(excludeMiis) {
       if (data.map.hasOwnProperty(playerName)) {
         var row = data.map[playerName];
 
-        // Skip Miis if excludeMiis is true
         if (excludeMiis && row[COLS.MII] === 'Yes') {
           continue;
         }
@@ -358,7 +352,6 @@ function getLeagueAverages(excludeMiis) {
       }
     }
 
-    // Calculate averages
     var averages = {};
     for (var stat in statTotals) {
       if (statTotals.hasOwnProperty(stat)) {
@@ -512,10 +505,9 @@ function saveCharacterAttributes(playerName, modifiedFields) {
 
     var COLS = config.ATTRIBUTES_CONFIG.COLUMNS;
 
-    // CRITICAL: Read directly from sheet to find current row (don't use cache)
-    // This ensures we write to the correct row even after config imports
+    // Read current player row from sheet
     var lastRow = attributeSheet.getLastRow();
-    var nameColumn = COLS.NAME + 1; // Convert 0-based to 1-based
+    var nameColumn = COLS.NAME + 1;
     var names = attributeSheet.getRange(config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW, nameColumn,
                                         lastRow - config.ATTRIBUTES_CONFIG.FIRST_DATA_ROW + 1, 1).getValues();
 
@@ -564,11 +556,10 @@ function saveCharacterAttributes(playerName, modifiedFields) {
       'Mii Color': COLS.MII_COLOR + 1
     };
 
-    // P1 Compliance: Batch all updates - build A1 notations BEFORE loop, write ONCE after
+    // Batch all attribute updates
     var a1Notations = [];
     var valuesToUpdate = [];
 
-    // Collect all updates in memory first
     for (var fieldLabel in modifiedFields) {
       if (modifiedFields.hasOwnProperty(fieldLabel)) {
         var columnNumber = fieldToColumn[fieldLabel];
@@ -581,28 +572,24 @@ function saveCharacterAttributes(playerName, modifiedFields) {
 
         var newValue = modifiedFields[fieldLabel];
 
-        // Special handling for Ability field - strip suffixes
         if (fieldLabel === 'Ability') {
           newValue = newValue.replace(' (Fielding)', '').replace(' (Baserunning)', '');
         }
 
-        // Convert to number if it's a numeric field
         if (typeof newValue === 'string' && !isNaN(newValue)) {
           newValue = Number(newValue);
         }
 
-        // Collect A1 notation and value for batch update
         a1Notations.push(attributeSheet.getRange(rowNumber, columnNumber).getA1Notation());
         valuesToUpdate.push([[newValue]]);
       }
     }
 
-    // P1 Gold Standard: Write ALL updates in ONE SpreadsheetApp API call
+    // Write all updates to sheet
     if (a1Notations.length > 0) {
       attributeSheet.getRangeList(a1Notations).setValues(valuesToUpdate);
     }
 
-    // Clear cache to force refresh
     clearAttributeCache();
 
     return { success: true, message: 'Character attributes updated successfully' };
