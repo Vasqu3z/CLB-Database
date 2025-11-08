@@ -279,7 +279,10 @@ function getClassAverages(characterClass, excludeMiis) {
     return averages;
 
   } catch (e) {
-    Logger.log('Error in getClassAverages: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('ERROR [DatabaseAttributes/getClassAverages]: ' + e.toString());
+    }
     return null;
   }
 }
@@ -389,7 +392,10 @@ function getLeagueAverages(excludeMiis) {
     return averages;
 
   } catch (e) {
-    Logger.log('Error in getLeagueAverages: ' + e.toString());
+    var config = getConfig();
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('ERROR [DatabaseAttributes/getLeagueAverages]: ' + e.toString());
+    }
     return null;
   }
 }
@@ -558,12 +564,18 @@ function saveCharacterAttributes(playerName, modifiedFields) {
       'Mii Color': COLS.MII_COLOR + 1
     };
 
-    // Update each modified field
+    // P1 Compliance: Batch all updates - build A1 notations BEFORE loop, write ONCE after
+    var a1Notations = [];
+    var valuesToUpdate = [];
+
+    // Collect all updates in memory first
     for (var fieldLabel in modifiedFields) {
       if (modifiedFields.hasOwnProperty(fieldLabel)) {
         var columnNumber = fieldToColumn[fieldLabel];
         if (!columnNumber) {
-          Logger.log('Warning: Unknown field label: ' + fieldLabel);
+          if (config.DEBUG.ENABLE_LOGGING) {
+            Logger.log('WARNING [DatabaseAttributes/saveCharacterAttributes]: Unknown field label: ' + fieldLabel);
+          }
           continue;
         }
 
@@ -579,9 +591,15 @@ function saveCharacterAttributes(playerName, modifiedFields) {
           newValue = Number(newValue);
         }
 
-        // Update the cell
-        attributeSheet.getRange(rowNumber, columnNumber).setValue(newValue);
+        // Collect A1 notation and value for batch update
+        a1Notations.push(attributeSheet.getRange(rowNumber, columnNumber).getA1Notation());
+        valuesToUpdate.push([[newValue]]);
       }
+    }
+
+    // P1 Gold Standard: Write ALL updates in ONE SpreadsheetApp API call
+    if (a1Notations.length > 0) {
+      attributeSheet.getRangeList(a1Notations).setValues(valuesToUpdate);
     }
 
     // Clear cache to force refresh
@@ -590,7 +608,9 @@ function saveCharacterAttributes(playerName, modifiedFields) {
     return { success: true, message: 'Character attributes updated successfully' };
 
   } catch (e) {
-    Logger.log('Error in saveCharacterAttributes: ' + e.toString());
+    if (config.DEBUG.ENABLE_LOGGING) {
+      Logger.log('ERROR [DatabaseAttributes/saveCharacterAttributes]: ' + e.toString());
+    }
     throw new Error('Failed to save character attributes: ' + e.message);
   }
 }
