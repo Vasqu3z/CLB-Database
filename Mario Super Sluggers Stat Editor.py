@@ -797,6 +797,12 @@ def getGroupSize(n):
 #Chem functions
 
 def currentChem():
+	"""
+	Display chemistry relationships for selected character(s) in recap panel.
+
+	Shows color-coded chemistry list: red (negative), green (positive).
+	Only displays non-neutral chemistry to keep output concise.
+	"""
 	chemRecap.configure(state="normal")
 	chemRecap.delete("0.0",tk.END)
 	L = chemRecap.tag_names()
@@ -874,6 +880,12 @@ def dirReset():
 	chemColor()
 
 def chemColor(*args):
+	"""
+	Update chemistry matrix UI colors based on current values.
+
+	Color coding: Red (negative/0), Yellow (neutral/1), Green (positive/2)
+	Triggered when character selection changes in dropdowns.
+	"""
 	currentChem()
 	start=chemFrom.get()
 	end=chemTo.get()
@@ -1892,6 +1904,12 @@ def randomizeStats():
 #Traj functions
 
 def trajDisplay(clear):
+	"""
+	Refresh trajectory editor UI display.
+
+	Args:
+		clear: True to clear and disable all controls, False to populate from selected trajectory
+	"""
 	if clear:
 		trajGroup.set("Pick a trajectory :")
 		trajGroupActiveVar.set(1)
@@ -2018,8 +2036,22 @@ def resetTraj():
 	
 #Gecko code and saving functions
 
+# Character indices that are captains by default in the game
+# 0: Mario, 1: Luigi, 2: Donkey Kong, 3: Diddy Kong, 4: Peach, 5: Daisy
+# 6: Green Yoshi, 9: Bowser, 10: Wario, 11: Waluigi, 17: Birdo, 19: Bowser Jr.
+CAPTAIN_INDICES = [0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 17, 19]
+
 def getCaptain(i):
-	if i in [0,1,2,3,4,5,6,9,10,11,17,19]:
+	"""
+	Determine if a character is a captain by default.
+
+	Args:
+		i: Character index in charList (0-123)
+
+	Returns:
+		int: 1 if captain, 0 if not
+	"""
+	if i in CAPTAIN_INDICES:
 		return 1
 	else:
 		return 0
@@ -2046,7 +2078,31 @@ def getStatOffset(j):
 		return j+11
 	else:
 		return 2*j-11
-	
+
+# ===== GECKO CODE GENERATION =====
+#
+# Gecko codes are cheat codes for the Dolphin emulator that patch game memory.
+# This section generates codes that modify character stats and chemistry in-game.
+#
+# Memory Layout:
+# - Base Address: 0x6CFA27 (7137703 decimal) - Character data start
+# - Each character: 142 bytes
+#   - Bytes 0-40: Stats (26 stats, some are 2 bytes)
+#   - Bytes 41-141: Chemistry values (101 bytes)
+# - Trajectory Base: 0x62A8DC (6463836 decimal)
+# - Stamina Base: 0x6291A4 (6457636 decimal)
+# - Star Pitch Type Base: 0x62914C (6457532 decimal)
+# - Trajectory Heights Base: 0x627A08 (6450824 decimal)
+#
+# Gecko Code Format:
+# - 04XXXXXX YYYYYYYY: Write 4 bytes to address XXXXXX
+# - 06XXXXXX NNNNNNNN: Write N bytes to address XXXXXX (followed by data)
+#
+# Optimization:
+# - Only generates code for values that differ from defaults
+# - Groups consecutive writes into 06 codes for efficiency
+# - Maximum code size: ~380 lines (game limit)
+
 def simpleAdvance(stat,default,L):
 	is4=L[0]
 	is6=L[1]
@@ -2343,13 +2399,23 @@ def geckoPartExclude():
 		geckoWarning.configure(text="")
 		
 def geckoCopy():
+	"""
+	Copy generated Gecko code to system clipboard.
+
+	Tkinter clipboard persistence fix:
+	Tkinter's clipboard is cleared when the window loses focus or closes.
+	This is a known Tkinter limitation on all platforms.
+
+	Solution uses multiple update cycles and a delayed update (100ms)
+	to ensure clipboard persists even if user closes window immediately.
+	"""
 	root.clipboard_clear()
 	root.clipboard_append(geckoDisplay.get("1.0", tk.END).strip())
-	# Force multiple update cycles to ensure clipboard data persists
-	# This prevents clipboard from being cleared when window loses focus
+
 	root.update()
 	root.update_idletasks()
-	# Keep clipboard alive even after window closes by delaying the update
+
+	# Delayed update keeps clipboard alive after window closes
 	root.after(100, lambda: root.update_idletasks())
 
 # --- ADD THIS NEW SAVE/LOAD LOGIC ---
