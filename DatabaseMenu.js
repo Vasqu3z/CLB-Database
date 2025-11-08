@@ -14,17 +14,12 @@ function onOpen() {
     .addItem('🔐 Admin: Comparison with Averages', 'showAttributeComparisonAdmin')
     .addSeparator()
     .addSubMenu(ui.createMenu('🔧 Chemistry Tools')
-      .addItem('🔄 Convert Matrix to Lookup (with Variants)', 'convertChemistryMatrixToLookupWithVariants')
-      .addSeparator()
-      .addSubMenu(ui.createMenu('✏️ Bulk Operations')
-        .addItem('➕ Bulk Add Chemistry', 'bulkAddChemistry')
-        .addItem('✏️ Bulk Edit Chemistry', 'bulkEditChemistry')
-        .addItem('🗑️ Bulk Remove Chemistry', 'bulkRemoveChemistry'))
-      .addSeparator()
-      .addItem('📊 Update Chemistry JSON Only', 'updateChemistryDataJSON')
-      .addItem('🔍 Check Bidirectional Chemistry', 'showBidirectionalReport')
-      .addSeparator()
+      .addItem('✏️ Visual Chemistry Editor', 'showChemistryEditor')
+      .addItem('📊 Update Chemistry JSON Cache', 'updateChemistryDataJSON')
       .addItem('🧹 Clear JSON Cache', 'clearChemistryCache'))
+    .addSubMenu(ui.createMenu('📦 Stats Preset Import/Export')
+      .addItem('📥 Import Full Preset', 'importChemistryFromStatsPreset')
+      .addItem('📤 Export Full Preset', 'exportChemistryToStatsPreset'))
     .addSeparator()
     .addItem('📋 About', 'showAbout')
     .addToUi();
@@ -48,9 +43,17 @@ function showAbout() {
     '  • Visual chemistry connections\n' +
     '  • Build and optimize lineups\n\n' +
     '🔧 Chemistry Tools:\n' +
-    '  • Bulk add/edit/remove chemistry\n' +
-    '  • Automatic variant expansion\n' +
-    '  • Bidirectional validation\n\n' +
+    '  • Visual Chemistry Editor\n' +
+    '  • Compact relationship views\n' +
+    '  • Change logging for balance tracking\n' +
+    '  • Negative/Neutral/Positive scale\n' +
+    '  • JSON caching for performance\n\n' +
+    '📦 Stats Preset Import/Export:\n' +
+    '  • Import/Export full presets (228 lines)\n' +
+    '  • Chemistry + Stats + Trajectory data\n' +
+    '  • Custom trajectory name support\n' +
+    '  • Character name mapping\n' +
+    '  • Custom column preservation\n\n' +
     '🔐 Admin Version:\n' +
     '  • Includes league averages\n' +
     '  • Balance characters efficiently\n' +

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .edit-section {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .character-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chemistry-center {
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .chemistry-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .chem-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .chem-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .chem-btn.none {
+      border-color: #f44336;
+      color: #f44336;
+    }
+
+    .chem-btn.none.active {
+      background: #f44336;
+      color: white;
+    }
+
+    .chem-btn.neutral {
+      border-color: #999;
+      color: #666;
+    }
+
+    .chem-btn.neutral.active {
+      background: #f0f0f0;
+      border-color: #666;
+    }
+
+    .chem-btn.positive {
+      border-color: #4CAF50;
+      color: #4CAF50;
+    }
+
+    .chem-btn.positive.active {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .relationships-compact {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 10px;
+      background: #fafafa;
+      font-size: 13px;
+    }
+
+    .relationships-compact:empty::after {
+      content: 'Only neutral chemistry';
+      color: #999;
+      font-style: italic;
+      display: block;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .relationship-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      margin-bottom: 4px;
+      background: white;
+      border-radius: 3px;
+      border-left: 3px solid #ddd;
+      transition: all 0.2s;
+    }
+
+    .relationship-item:hover {
+      transform: translateX(3px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .relationship-item.negative {
+      border-left-color: #f44336;
+    }
+
+    .relationship-item.positive {
+      border-left-color: #4CAF50;
+    }
+
+    .relationship-item .name {
+      font-weight: 400;
+      font-size: 12px;
+      color: #333;
+    }
+
+    .relationship-item .value {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .relationship-item .value.negative {
+      background: #ffebee;
+      color: #f44336;
+    }
+
+    .relationship-item .value.positive {
+      background: #e8f5e9;
+      color: #4CAF50;
+    }
+
+    .compact-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .compact-header h4 {
+      font-size: 12px;
+      color: #666;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .compact-stats {
+      display: flex;
+      gap: 10px;
+      font-size: 11px;
+    }
+
+    .compact-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .compact-stat .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .compact-stat.positive .dot {
+      background: #4CAF50;
+    }
+
+    .compact-stat.negative .dot {
+      background: #f44336;
+    }
+
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #eee;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #45a049;
+    }
+
+    .btn-secondary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5568d3;
+    }
+
+    .btn-outline {
+      background: white;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn-outline:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 15px 20px;
+      background: #333;
+      color: white;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      background: #4CAF50;
+    }
+
+    .toast.error {
+      background: #f44336;
+    }
+
+    .dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .dialog-overlay.show {
+      display: flex;
+    }
+
+    .dialog-box {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .dialog-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .dialog-message {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .dialog-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .dialog-btn.primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .dialog-btn.primary:hover {
+      background: #5568d3;
+    }
+
+    .dialog-btn.secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .dialog-btn.secondary:hover {
+      background: #d0d0d0;
+    }
+
+    select:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚡ Chemistry Matrix Editor</h1>
+      <p>Select two characters to edit their chemistry relationship</p>
+    </div>
+
+    <div class="content">
+      <div class="edit-section">
+        <!-- Character 1 Column -->
+        <div class="character-column">
+          <div class="input-group">
+            <label>Character 1</label>
+            <select id="char1Select" onchange="updateCharacterInfo()" disabled>
+              <option value="">Loading characters...</option>
+            </select>
+          </div>
+          <div id="char1Info" class="relationships-compact"></div>
+        </div>
+
+        <!-- Chemistry Controls Center -->
+        <div class="chemistry-center">
+          <div id="quickEditPanel" style="display: none;">
+            <label style="text-align: center; margin-bottom: 10px;">Chemistry Value</label>
+            <div class="chemistry-buttons">
+              <button class="chem-btn none" onclick="setChemistry(0)">
+                Negative
+              </button>
+              <button class="chem-btn neutral" onclick="setChemistry(1)">
+                Neutral
+              </button>
+              <button class="chem-btn positive" onclick="setChemistry(2)">
+                Positive
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Character 2 Column -->
+        <div class="character-column">
+          <div class="input-group">
+            <label>Character 2</label>
+            <select id="char2Select" onchange="updateCharacterInfo()" disabled>
+              <option value="">Loading characters...</option>
+            </select>
+          </div>
+          <div id="char2Info" class="relationships-compact"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button class="btn btn-outline" onclick="google.script.host.close()">Cancel</button>
+        <button class="btn btn-secondary" onclick="exportChemistry()">Export to .txt</button>
+        <button class="btn btn-primary" onclick="saveChanges()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- Dialog Overlay -->
+  <div id="dialogOverlay" class="dialog-overlay">
+    <div class="dialog-box">
+      <div class="dialog-title" id="dialogTitle">Dialog Title</div>
+      <div class="dialog-message" id="dialogMessage">Dialog message goes here.</div>
+      <div class="dialog-buttons" id="dialogButtons">
+        <button class="dialog-btn primary" onclick="hideDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let chemistryMatrix = [];
+    let characters = [];
+    let currentChemistry = 0;
+    let hasChanges = false;
+    let changeLog = []; // Track all changes for logging
+
+    // Initialize
+    window.onload = function() {
+      showToast('Loading chemistry data...', 'info');
+      google.script.run
+        .withSuccessHandler(onDataLoaded)
+        .withFailureHandler(onError)
+        .getChemistryMatrix();
+    };
+
+    function onDataLoaded(data) {
+      chemistryMatrix = data.matrix;
+      characters = data.characters;
+
+      // Enable dropdowns
+      const char1Select = document.getElementById('char1Select');
+      const char2Select = document.getElementById('char2Select');
+
+      char1Select.disabled = false;
+      char2Select.disabled = false;
+
+      // Clear loading placeholder and add proper placeholder
+      char1Select.innerHTML = '<option value="">Select a character...</option>';
+      char2Select.innerHTML = '<option value="">Select a character...</option>';
+
+      populateCharacterDropdowns();
+      addSelectFilter();
+      showToast('Chemistry data loaded', 'success');
+    }
+
+    function onError(error) {
+      showDialog('Error Loading Data', 'Failed to load chemistry data: ' + error.message);
+    }
+
+    function populateCharacterDropdowns() {
+      const selects = [
+        document.getElementById('char1Select'),
+        document.getElementById('char2Select')
+      ];
+
+      characters.forEach((char, idx) => {
+        selects.forEach(select => {
+          const option = document.createElement('option');
+          option.value = idx;
+          option.textContent = char;
+          select.appendChild(option);
+        });
+      });
+    }
+
+    function addSelectFilter() {
+      const selects = ['char1Select', 'char2Select'];
+
+      selects.forEach(function(selectId) {
+        const select = document.getElementById(selectId);
+
+        // Add keyboard search functionality
+        let searchTerm = '';
+        let searchTimeout;
+
+        select.addEventListener('keydown', function(e) {
+          // Only handle single character keys (letters, numbers)
+          if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            e.preventDefault(); // Prevent default select behavior
+
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+
+            // Build search term
+            searchTerm += e.key.toLowerCase();
+
+            // Find matching option
+            const options = Array.from(select.options);
+            const match = options.find(function(opt) {
+              return opt.textContent.toLowerCase().startsWith(searchTerm);
+            });
+
+            if (match) {
+              select.value = match.value;
+              // Trigger change event to update character info
+              select.dispatchEvent(new Event('change'));
+            }
+
+            // Clear search term after 1 second
+            searchTimeout = setTimeout(function() {
+              searchTerm = '';
+            }, 1000);
+          }
+        });
+      });
+    }
+
+    function updateCharacterInfo() {
+      const idx1 = parseInt(document.getElementById('char1Select').value);
+      const idx2 = parseInt(document.getElementById('char2Select').value);
+
+      // Update character 1 info
+      if (!isNaN(idx1)) {
+        displayCompactRelationships('char1Info', idx1, idx2);
+      } else {
+        document.getElementById('char1Info').innerHTML = '';
+      }
+
+      // Update character 2 info
+      if (!isNaN(idx2)) {
+        displayCompactRelationships('char2Info', idx2, idx1);
+      } else {
+        document.getElementById('char2Info').innerHTML = '';
+      }
+
+      // Show/hide chemistry controls
+      if (isNaN(idx1) || isNaN(idx2)) {
+        document.getElementById('quickEditPanel').style.display = 'none';
+        return;
+      }
+
+      if (idx1 === idx2) {
+        showDialog('Invalid Selection', 'Cannot set chemistry between the same character. Please select two different characters.');
+        document.getElementById('quickEditPanel').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('quickEditPanel').style.display = 'block';
+      currentChemistry = chemistryMatrix[idx1][idx2];
+      updateChemistryButtons();
+    }
+
+    function updateChemistryButtons() {
+      document.querySelectorAll('.chem-btn').forEach(btn => btn.classList.remove('active'));
+
+      if (currentChemistry === 0) {
+        document.querySelector('.chem-btn.none').classList.add('active');
+      } else if (currentChemistry === 1) {
+        document.querySelector('.chem-btn.neutral').classList.add('active');
+      } else if (currentChemistry === 2) {
+        document.querySelector('.chem-btn.positive').classList.add('active');
+      }
+    }
+
+    function setChemistry(value) {
+      const idx1 = parseInt(document.getElementById('char1Select').value);
+      const idx2 = parseInt(document.getElementById('char2Select').value);
+
+      if (isNaN(idx1) || isNaN(idx2)) return;
+
+      // Track the change before updating
+      const oldValue = chemistryMatrix[idx1][idx2];
+      if (oldValue !== value) {
+        changeLog.push({
+          char1: characters[idx1],
+          char2: characters[idx2],
+          oldValue: oldValue,
+          newValue: value
+        });
+      }
+
+      // Update matrix (symmetric)
+      chemistryMatrix[idx1][idx2] = value;
+      chemistryMatrix[idx2][idx1] = value;
+
+      currentChemistry = value;
+      updateChemistryButtons();
+      hasChanges = true;
+
+      // Refresh the compact views
+      updateCharacterInfo();
+
+      const chemText = value === 0 ? 'Negative' : value === 1 ? 'Neutral' : 'Positive';
+      showToast(`Chemistry updated: ${characters[idx1]} ↔ ${characters[idx2]} → ${chemText}`, 'success');
+    }
+
+    // Display compact relationships under character dropdown
+    function displayCompactRelationships(containerId, charIdx, otherCharIdx) {
+      const container = document.getElementById(containerId);
+      const row = chemistryMatrix[charIdx];
+      const relationships = [];
+
+      // Collect non-neutral relationships (0 = negative, 2 = positive)
+      for (let i = 0; i < characters.length; i++) {
+        if (i !== charIdx && (row[i] === 0 || row[i] === 2)) {
+          relationships.push({
+            index: i,
+            name: characters[i],
+            value: row[i]
+          });
+        }
+      }
+
+      // Count stats
+      const positiveCount = relationships.filter(r => r.value === 2).length;
+      const negativeCount = relationships.filter(r => r.value === 0).length;
+
+      // Sort: positive first, then alphabetically
+      relationships.sort((a, b) => {
+        if (a.value !== b.value) return b.value - a.value;
+        return a.name.localeCompare(b.name);
+      });
+
+      // Build HTML
+      let html = '';
+
+      if (relationships.length > 0) {
+        html += `
+          <div class="compact-header">
+            <h4>Chemistry</h4>
+            <div class="compact-stats">
+              <div class="compact-stat positive">
+                <span class="dot"></span>
+                <span>${positiveCount}</span>
+              </div>
+              <div class="compact-stat negative">
+                <span class="dot"></span>
+                <span>${negativeCount}</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        relationships.forEach(rel => {
+          const valueText = rel.value === 0 ? 'NEG' : 'POS';
+          const valueClass = rel.value === 0 ? 'negative' : 'positive';
+          const itemClass = rel.value === 0 ? 'negative' : 'positive';
+
+          // Highlight if this is the other selected character
+          const isOther = rel.index === otherCharIdx;
+          const highlightClass = isOther ? ' style="background: #fff9c4;"' : '';
+
+          html += `
+            <div class="relationship-item ${itemClass}"${highlightClass}>
+              <span class="name">${rel.name}</span>
+              <span class="value ${valueClass}">${valueText}</span>
+            </div>
+          `;
+        });
+      }
+
+      container.innerHTML = html;
+    }
+
+    // Save Functions
+    function saveChanges() {
+      if (!hasChanges) {
+        showToast('No changes to save', 'info');
+        return;
+      }
+
+      showToast('Saving changes...', 'info');
+
+      google.script.run
+        .withSuccessHandler(onSaveSuccess)
+        .withFailureHandler(onSaveError)
+        .updateChemistryMatrix(chemistryMatrix, changeLog);
+    }
+
+    function onSaveSuccess(result) {
+      if (result.success) {
+        hasChanges = false;
+        changeLog = []; // Clear change log after successful save
+        const logMsg = result.changesLogged > 0
+          ? ` (${result.changesLogged} changes logged)`
+          : '';
+        showToast(`✅ Saved ${result.totalPairs} chemistry pairs${logMsg}`, 'success');
+      } else {
+        showDialog('Save Failed', 'Failed to save chemistry data: ' + result.error);
+      }
+    }
+
+    function onSaveError(error) {
+      showDialog('Save Failed', 'An error occurred while saving: ' + error.message);
+    }
+
+    function exportChemistry() {
+      google.script.run.exportChemistryToStatsPreset();
+      showToast('Export dialog opened', 'success');
+    }
+
+    // Toast Notifications
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast show ' + type;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Dialog Functions
+    function showDialog(title, message, buttons = null) {
+      document.getElementById('dialogTitle').textContent = title;
+      document.getElementById('dialogMessage').textContent = message;
+
+      const buttonsContainer = document.getElementById('dialogButtons');
+
+      if (buttons) {
+        buttonsContainer.innerHTML = '';
+        buttons.forEach(btn => {
+          const button = document.createElement('button');
+          button.className = 'dialog-btn ' + (btn.primary ? 'primary' : 'secondary');
+          button.textContent = btn.text;
+          button.onclick = btn.onClick;
+          buttonsContainer.appendChild(button);
+        });
+      } else {
+        buttonsContainer.innerHTML = '<button class="dialog-btn primary" onclick="hideDialog()">OK</button>';
+      }
+
+      document.getElementById('dialogOverlay').classList.add('show');
+    }
+
+    function hideDialog() {
+      document.getElementById('dialogOverlay').classList.remove('show');
+    }
+
+    // Warn before closing with unsaved changes
+    window.onbeforeunload = function() {
+      if (hasChanges) {
+        return 'You have unsaved changes. Are you sure you want to close?';
+      }
+    };
+  </script>
+</body>
+</html>

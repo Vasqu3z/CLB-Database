@@ -387,6 +387,9 @@
       
       var basicInfo = [
         {label: 'Character Class', key: 'characterClass'},
+        {label: 'Captain', key: 'captain'},
+        {label: 'Mii', key: 'mii'},
+        {label: 'Mii Color', key: 'miiColor'},
         {label: 'Throwing Side', key: 'armSide'},
         {label: 'Batting Side', key: 'battingSide'},
         {label: 'Weight', key: 'weight'},
@@ -467,22 +470,33 @@
       html += '</tr>';
       
       var pitchingStats = [
-        {label: 'Curveball Speed', key: 'curveballSpeed'},
+        {label: 'Star Pitch', key: 'starPitch', isText: true},
         {label: 'Fastball Speed', key: 'fastballSpeed'},
+        {label: 'Curveball Speed', key: 'curveballSpeed'},
         {label: 'Curve', key: 'curve'},
         {label: 'Stamina', key: 'stamina'}
       ];
       
       pitchingStats.forEach(function(stat) {
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
-        var values = stats.map(function(p) { return p[stat.key]; });
-        var maxValue = Math.max.apply(null, values);
-        
-        stats.forEach(function(player) {
-          var value = player[stat.key];
-          var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
-          html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
-        });
+
+        if (stat.isText) {
+          // Text value, no highlighting
+          stats.forEach(function(player) {
+            var value = player[stat.key];
+            html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          });
+        } else {
+          // Numeric value, highlight best
+          var values = stats.map(function(p) { return p[stat.key]; });
+          var maxValue = Math.max.apply(null, values);
+
+          stats.forEach(function(player) {
+            var value = player[stat.key];
+            var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
+            html += '<td' + cellClass + '>' + (value !== undefined && value !== null ? value : '-') + '</td>';
+          });
+        }
         html += '</tr>';
       });
       
@@ -512,18 +526,21 @@
       html += '</tr>';
       
       var hittingStats = [
+        {label: 'Star Swing', key: 'starSwing', isText: true},
+        {label: 'Hit Curve', key: 'hitCurve'},
         {label: 'Hitting Trajectory', key: 'hittingTrajectory'},
         {label: 'Slap Hit Contact Size', key: 'slapHitContact'},
         {label: 'Charge Hit Contact Size', key: 'chargeHitContact'},
         {label: 'Slap Hit Power', key: 'slapHitPower'},
-        {label: 'Charge Hit Power', key: 'chargeHitPower'}
+        {label: 'Charge Hit Power', key: 'chargeHitPower'},
+        {label: 'Pre-Charge', key: 'preCharge', isText: true}
       ];
       
       hittingStats.forEach(function(stat) {
         html += '<tr><td class="stat-label">' + stat.label + '</td>';
-        
-        if (stat.key === 'hittingTrajectory') {
-          // Trajectory is text, no highlighting
+
+        if (stat.isText) {
+          // Text value, no highlighting
           stats.forEach(function(player) {
             var value = player[stat.key];
             html += '<td>' + (value !== undefined && value !== null ? value : '-') + '</td>';
@@ -532,7 +549,7 @@
           // Numeric values, highlight best
           var values = stats.map(function(p) { return p[stat.key]; });
           var maxValue = Math.max.apply(null, values);
-          
+
           stats.forEach(function(player) {
             var value = player[stat.key];
             var cellClass = (value === maxValue && maxValue > 0) ? ' class="best-value"' : '';
@@ -568,8 +585,8 @@
       html += '</tr>';
       
       var fieldingStats = [
-        {label: 'Throwing Speed', key: 'throwingSpeed'},
-        {label: 'Fielding', key: 'fielding'}
+        {label: 'Fielding', key: 'fielding'},
+        {label: 'Throwing Speed', key: 'throwingSpeed'}
       ];
       
       fieldingStats.forEach(function(stat) {
