@@ -2852,8 +2852,6 @@ def loadChanges():
             chem = ""
             stat = ""
             traj = ""
-
-            # ... (The rest of your original data-reading logic is perfect) ...
             
             # chemistry lines
             for i in range(100):
