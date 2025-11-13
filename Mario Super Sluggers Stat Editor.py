@@ -2917,6 +2917,13 @@ def loadChanges():
                     trajUsed[i] = int(useds[i])
 
             changedTrajListUsed()
+            # Refresh trajectory editor dropdown to use loaded names
+            trajGroup.config(values=trajAllList)
+            trajGroup.set("Pick a trajectory")
+
+            trajDisplay(1)
+            chemColor()
+
             trajDisplay(1)
             chemColor()
             
