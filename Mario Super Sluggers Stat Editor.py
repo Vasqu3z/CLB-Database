@@ -841,7 +841,7 @@ def getGroupSize(n):
 	# Single character (default) - not part of any group
 	return 1
 
-#Chem functions
+# Chem functions
 
 def currentChem():
 	"""
@@ -1285,8 +1285,8 @@ def enableRCColors():
 	chemRCMin.configure(state="readonly")
 	chemRCLabel1.configure(state=tk.NORMAL)
 	chemRCLabel2.configure(state=tk.NORMAL)
-	
-#Stats Functions
+
+# Stats Functions
 
 def statCheckButton(name):
 	"""
@@ -1717,8 +1717,8 @@ def resetStatsAE():
 		statDisplay(1)
 	else:
 		statDisplay(0)
-	
-#Stat Randomizer functions
+
+# Stat Randomizer functions
 
 def randCheckButton(name):
 	var="randStat"+name
@@ -2242,8 +2242,8 @@ def resetTraj():
 	trajDisplay(0)
 	recapList.insert(tk.END,group+" trajectory heights reset\n")
 	recapList.configure(state="disabled")
-	
-#Gecko code and saving functions
+
+# Gecko code and saving functions
 
 # Character indices that are captains by default in the game
 # 0: Mario, 1: Luigi, 2: Donkey Kong, 3: Diddy Kong, 4: Peach, 5: Daisy
@@ -3086,7 +3086,7 @@ def clearPlayersGecko():
 	geckoPlayerList.clear()
 	refreshGeckoText()
 
-#Wacky functions
+# Wacky functions
 
 def fixWalu():
 	changedStat[11][11]=1
@@ -3864,7 +3864,7 @@ trajResetTraj.grid(row=22,column=3,columnspan=2)
 trajLabelExplanation = tk.Label(trajFrame, text="If the values in a set don't sum to 100, they will get updated to reflect how the game would interpret them")
 trajLabelExplanation.grid(row=23,column=0,columnspan=6)
 
-#Gecko Code
+# Gecko Code
 
 geckoPlayerList = []
 
