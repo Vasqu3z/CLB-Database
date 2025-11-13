@@ -872,10 +872,12 @@ def currentChem():
 	chemRecap.configure(state="disabled")				
 
 def dirChange():
+	"""Update UI text for one-sided chemistry direction (A → B)."""
 	chemText.configure(text="to")
 	chemColor()
 
 def dirReset():
+	"""Update UI text for two-sided chemistry direction (A ↔ B)."""
 	chemText.configure(text="with")
 	chemColor()
 
@@ -923,11 +925,33 @@ def chemColor(*args):
 	chemText.configure(fg=color)
 	
 def simpleChemChange(start,end,chem,direction):
+	"""
+	Set chemistry value between two characters.
+
+	Args:
+		start: Character index in charList (0-100)
+		end: Character index in charList (0-100)
+		chem: Chemistry value (0=negative, 1=neutral, 2=positive)
+		direction: 1=one-way, 2=both ways (symmetric)
+
+	Chemistry is stored as a matrix where chemistry[start][end] represents
+	how 'start' feels about 'end'.
+	"""
 	changedChem[start][end]=chem
 	if direction==2:
 		changedChem[end][start]=chem
 	
 def changeChem():
+	"""
+	Apply selected chemistry change between two character groups.
+
+	Uses UI selections to determine:
+	- Start/End characters or groups
+	- Chemistry type (negative/neutral/positive)
+	- Direction (one-way or both ways)
+
+	Updates chemistry matrix and refreshes UI colors.
+	"""
 	recapList.configure(state="normal")
 	if directionVar.get()==0:
 		recapList.insert(tk.END, "No direction set\n")
@@ -981,6 +1005,17 @@ def changeChem():
 	recapList.configure(state="disabled")
 	
 def globalChem():
+	"""
+	Apply global chemistry changes to all characters.
+
+	Options:
+	1. Reset to defaults
+	2. Set all to negative (bad chemistry)
+	3. Set all to neutral
+	4. Set all to positive (good chemistry)
+
+	Option to include or exclude Mii characters (indices 77-100).
+	"""
 	global changedChem
 	recapList.configure(state="normal")
 	choice=chemResetVar.get()
@@ -1021,6 +1056,12 @@ def globalChem():
 	chemColor()
 	
 def autoChem():
+	"""
+	Set all characters to have positive chemistry with themselves.
+
+	Sets diagonal of chemistry matrix to 2 (positive).
+	Useful for ensuring all characters have self-chemistry enabled.
+	"""
 	for i in range(101):
 		changedChem[i][i]=2
 	recapList.configure(state="normal")
@@ -1028,6 +1069,16 @@ def autoChem():
 	recapList.configure(state="disabled")
 	
 def variantChem():
+	"""
+	Set all character variants to have positive chemistry with each other.
+
+	Examples:
+	- All Yoshis (Green, Blue, Red, Yellow, etc.) will have good chemistry
+	- All Toads (Red, Blue, Green, Yellow, Purple) will have good chemistry
+	- All Dry Bones variants will have good chemistry
+
+	Uses getRCGroup() to identify which characters are variants of each other.
+	"""
 	for i in range(101):
 		G=getRCGroup(i)
 		if len(G)>1:
@@ -1040,6 +1091,21 @@ def variantChem():
 	recapList.configure(state="disabled")
 	
 def getRCGroup(i):
+	"""
+	Get the list of character indices that are variants of the same character type.
+
+	Args:
+		i: Character index in charList (0-100)
+
+	Returns:
+		list: Character indices that are variants of the same type
+		      Empty list if character has no variants or is unused
+
+	Example groups:
+	- Yoshis: Green, Red, Blue, Yellow, Light Blue, Pink (6 total)
+	- Toads: Red, Blue, Green, Yellow, Purple (5 total)
+	- Miis: Male and female version of each color (pairs)
+	"""
 	if i==6:
 		return [6,66,67,68,69,70] #yoshis
 	if i==12:
@@ -1070,6 +1136,19 @@ def getRCGroup(i):
 	return []
 	
 def chemFullRandom():
+	"""
+	Randomize all chemistry relationships with weighted probabilities.
+
+	Uses slider values to determine probabilities for each chemistry type:
+	- Bad/Neutral/Good chemistry ratios from sliders
+	- Optional: Include Miis (adds 24 more characters)
+	- Optional: Randomize Mii colors (ensure min/max characters per color)
+	- Optional: Separate variants (treat Yoshi colors as different)
+	- Optional: Allow self-chemistry (character having chemistry with itself)
+	- Optional: Asymmetric chemistry (A->B != B->A)
+
+	Chemistry values assigned randomly based on weighted probabilities.
+	"""
 	d=chemScaleBad.get()+chemScaleGood.get()+chemScaleNeutral.get()
 	pBad=chemScaleBad.get()/d
 	pNeutral=(chemScaleBad.get()+chemScaleNeutral.get())/d
@@ -1941,6 +2020,13 @@ def trajChanged(event):
 	trajDisplay(0)
 
 def changedTrajListUsed():
+	"""
+	Update the active trajectory list based on enabled/disabled trajectories.
+
+	Rebuilds trajList from trajAllList, including only enabled trajectories.
+	Updates the trajectory dropdown in the stats editor UI.
+	Called when trajectories are enabled/disabled in the trajectory editor.
+	"""
 	global trajList
 	trajList=[]
 	for i in range(6):
@@ -2057,6 +2143,22 @@ def getCaptain(i):
 		return 0
 
 def getTeam(i):
+	"""
+	Get the default team ID for a character.
+
+	Args:
+		i: Character index in charList (0-123)
+
+	Returns:
+		int: Team ID (1-12 for captains, 0 for non-team characters)
+
+	Team assignments:
+	- 0-5: Team IDs 1-6 (Mario, Luigi, DK, Diddy, Peach, Daisy)
+	- 6: Green Yoshi → Team 9
+	- 9: Bowser → Team 11
+	- 10-11: Wario/Waluigi → Teams 7-8
+	- 17,19: Birdo/Bowser Jr. → Teams 10,12
+	"""
 	if i<6:
 		return i+1
 	if i==6:
@@ -2070,6 +2172,26 @@ def getTeam(i):
 	return 0
 
 def getStatOffset(j):
+	"""
+	Get memory offset for a stat within character data block.
+
+	Each character occupies 142 bytes in game memory:
+	- Bytes 0-2: Character ID and basic info
+	- Bytes 3-40: Stats (some are 1 byte, some are 2 bytes)
+	- Bytes 41-141: Chemistry values (101 bytes)
+
+	Args:
+		j: Stat index in statsList (0-29)
+
+	Returns:
+		int: Byte offset within character's 142-byte block
+
+	Stat layout:
+	- Stats 0-10: Single-byte stats at offsets 3-13
+	- Stats 11-18: Two-byte stats (contact, power, etc.)
+	- Stats 19-22: Single-byte display stats
+	- Stats 23-28: Two-byte stats (speeds, stamina)
+	"""
 	if j<11:
 		return j+3
 	if j<19:
@@ -2104,6 +2226,32 @@ def getStatOffset(j):
 # - Maximum code size: ~380 lines (game limit)
 
 def simpleAdvance(stat,default,L):
+	"""
+	Accumulate a single byte for Gecko code generation.
+
+	Accumulates bytes into 4-byte or multi-byte write commands.
+	Tracks whether current value differs from default (optimization).
+
+	Args:
+		stat: Current stat byte value to write
+		default: Default stat byte value from game
+		L: State list [is4, is6, count40, count68, count60, stock41, stock42, code, code6, startAddress]
+
+	Returns:
+		Updated state list
+
+	State variables:
+		is4: Boolean (0/1) - Currently building a 4-byte write
+		is6: Boolean (0/1) - Currently building a multi-byte write
+		count40: Bytes accumulated for 04 command (0-3, cycles)
+		count68: Total bytes accumulated for 06 command
+		count60: Flag for 06 command state
+		stock41: Accumulated byte string for current 4-byte group
+		stock42: Accumulated byte string for previous 4-byte group
+		code: Generated 04 codes (string)
+		code6: Generated 06 code data (string)
+		startAddress: Current memory address (hex string)
+	"""
 	is4=L[0]
 	is6=L[1]
 	count40=L[2]
@@ -2119,10 +2267,30 @@ def simpleAdvance(stat,default,L):
 		is4=1
 	count40=(count40+1)%4
 	L.clear()
-	L=[is4,is6,count40,count68,count60,stock41,stock42,code,code6,startAddress]  
+	L=[is4,is6,count40,count68,count60,stock41,stock42,code,code6,startAddress]
 	return L.copy()
 	
 def advanceCount(stat,default,address,L):
+	"""
+	Advance Gecko code generation by one byte and emit codes when ready.
+
+	Calls simpleAdvance() then checks if a 4-byte group is complete.
+	When complete, decides whether to emit a 04 code or continue building 06 code.
+
+	Args:
+		stat: Current stat byte value
+		default: Default stat byte value
+		address: Current memory address being written
+		L: State list from simpleAdvance()
+
+	Returns:
+		Updated state list
+
+	Emits Gecko codes when:
+	- 4 bytes accumulated and all match defaults → skip
+	- 4 bytes accumulated and some differ → emit 04 or continue 06
+	- Switching from consecutive writes to non-consecutive → emit 06
+	"""
 	L=simpleAdvance(stat,default,L.copy())
 	is4=L[0]
 	is6=L[1]
@@ -2170,6 +2338,24 @@ def advanceCount(stat,default,address,L):
 	return L.copy()
 
 def resetCount(address,L):
+	"""
+	Finalize and emit any pending Gecko codes, then reset state.
+
+	Called at the end of each data section (stats, chemistry, trajectory, etc.)
+	to flush any accumulated codes and prepare for the next section.
+
+	Args:
+		address: Final memory address for this section
+		L: Current state list
+
+	Returns:
+		Reset state list with all pending codes emitted
+
+	Handles three cases:
+	1. Pending 04 code: Emit it
+	2. Pending 06 code: Emit with byte count
+	3. Partial bytes remaining: Emit with padding
+	"""
 	is4=L[0]
 	is6=L[1]
 	count68=L[3]
@@ -2207,6 +2393,32 @@ def resetCount(address,L):
 	return L.copy()
 
 def geckoGenerate(listPlayers,exclude):
+	"""
+	Generate Gecko cheat code for modified character data.
+
+	Creates optimized Gecko codes that patch game memory with modified stats,
+	chemistry, and trajectory data. Only writes values that differ from defaults.
+
+	Args:
+		listPlayers: List of character indices (0-100) to include in code
+		exclude: Boolean - if True, reset non-selected characters to defaults
+		         if False, keep non-selected characters as-is
+
+	Returns:
+		str: Gecko code (multi-line string, ready to paste into Dolphin)
+
+	Memory addresses:
+		0x6CFA27 (7137703): Character stats/chemistry (142 bytes each)
+		0x62A8DC (6463836): Trajectory types (2 bytes per character)
+		0x6291A4 (6457636): Stamina values (2 bytes per character)
+		0x62914C (6457532): Star pitch types (1 byte per character)
+		0x627A08 (6450824): Trajectory height curves (24 curves × 25 values)
+
+	Optimization strategy:
+		- Only write bytes that differ from defaults
+		- Group consecutive writes into 06 commands (more efficient)
+		- Use 04 commands for isolated 4-byte writes
+	"""
 	baseAddress=7137703
 	baseTraj=6463836
 	baseStamina=6457636
@@ -2757,6 +2969,25 @@ def fixWalu():
 	changedStat[11][11]=1
 	
 def reverseStats():
+	"""
+	Reverse all numeric stats (make low stats high and high stats low).
+
+	Fun "wacky" feature that inverts stat values:
+	- Low-stat characters become overpowered
+	- High-stat characters become weak
+
+	Formula: new_stat = max_stat - current_stat
+	Example: If max contact is 125 and character has 75, new value is 50
+
+	Special handling:
+	- Trajectory stat: Cycles through Low/Medium/High
+	- Waluigi's charge contact: Fixed to prevent crash (bug workaround)
+
+	Does NOT reverse:
+	- Pitching/batting stance (would break animations)
+	- Captain status (meaningless to reverse)
+	- Star abilities (categorical, not numeric)
+	"""
 	L=[0,0,3,0,4,0,0,0,0,0,125,90,75,110,100,100,110,105,10,10,10,10,220,255,95,0,0,0,120]
 	for j in [2,4,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,28]:
 		for i in range(101):
@@ -2773,6 +3004,16 @@ def reverseStats():
 	recapList.configure(state="disabled")
 
 def reverseChem():
+	"""
+	Reverse all chemistry relationships (good becomes bad, bad becomes good).
+
+	Fun "wacky" feature that flips chemistry values:
+	- Positive (2) → Negative (0)
+	- Negative (0) → Positive (2)
+	- Neutral (1) stays Neutral (1)
+
+	Creates opposite team dynamics: friends become enemies, enemies become friends.
+	"""
 	for i in range(101):
 		for j in range(101):
 			changedChem[i][j]=(2-changedChem[i][j])%3
@@ -2782,6 +3023,16 @@ def reverseChem():
 	recapList.configure(state="disabled")
 	
 def reverseHand():
+	"""
+	Reverse pitching and batting handedness for all characters.
+
+	Fun "wacky" feature that swaps Left ↔ Right:
+	- Right-handed pitchers become left-handed
+	- Left-handed batters become right-handed
+	- And vice versa
+
+	Changes both pitching stance (stat 0) and batting stance (stat 1).
+	"""
 	for i in range(101):
 		changedStat[i][0]=1-changedStat[i][0]
 		changedStat[i][1]=1-changedStat[i][1]
