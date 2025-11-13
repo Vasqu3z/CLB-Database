@@ -139,6 +139,34 @@ statsList = ["pitching arm","batting arm","character class","???","weight",
 			 "NOT stamina","traj","hit curve","stamina","star pitch type"]
 
 # ===== TRAJECTORY CONFIGURATION =====
+#
+# Trajectory System Overview:
+# - 6 possible trajectory types (3 active by default: Medium, High, Low)
+# - Each trajectory has 4 ball type variants:
+#   1. Normal hit (index 0)
+#   2. Slice hit (index 1)
+#   3. Charge hit (index 2)
+#   4. Both slice + charge (index 3)
+# - Total: 6 trajectories × 4 ball types = 24 trajectory curves
+#
+# Each curve has 25 height values representing the ball's vertical position
+# as it travels from home plate to the outfield.
+#
+# Height Values:
+# - Range: 0-100 (units vary by trajectory type)
+# - Game normalizes if sum != 100 (for display purposes)
+# - Values control arc shape (low values = line drive, high values = fly ball)
+#
+# Curve Indices (in defaultTraj and changedTraj arrays):
+# - 0-3: Medium trajectory (normal, slice, charge, both)
+# - 4-7: High trajectory (normal, slice, charge, both)
+# - 8-11: Low trajectory (normal, slice, charge, both)
+# - 12-15: Group 3 (if enabled)
+# - 16-19: Group 4 (if enabled)
+# - 20-23: Group 5 (if enabled)
+#
+# Example: changedTraj[0] = Medium/Normal curve (25 height values)
+#          changedTraj[8] = Low/Normal curve (25 height values)
 
 # All 6 possible trajectory groups (3 are used by default)
 # Can be renamed and enabled/disabled in the trajectory editor
@@ -777,24 +805,43 @@ def getGroupSize(n):
 		getGroupSize(0) -> 1   # "Baby DK" is a single character
 	"""
 	# Two-member groups (twins, pairs)
+	# 27 = Koopa Paratroopas (Green, Red)
+	# 30 = Koopa Troopas (Green, Red)
+	# 82-115 with mod 3 = 1: Mii color groups (male + female pairs)
+	#   - Pattern: Every 3rd index starting at 82 (Black, Blue, Brown, Green, etc.)
+	#   - Each Mii color has male (M) and female (F) versions
 	if n==27 or n==30 or (n>=82 and n%3==1 and n<=115):
 		return 2
+
 	# Three-member groups
+	# 10 = Bros (Hammer Bro, Fire Bro, Boomerang Bro)
+	# 46 = Piantas (Blue, Red, Yellow)
+	# 53 = Nokis (Blue, Red, Green)
 	if n==10 or n==46 or n==53:
 		return 3
+
 	# Four-member groups
+	# 18 = Dry Bones (Dark Bones, Blue, Gray, Green)
+	# 33 = Magikoopas (Blue, Red, Green, Yellow)
+	# 39 = Shy Guys (Blue, Gray, Green, Red, Yellow)
 	if n==18 or n==33 or n==39:
 		return 4
+
 	# Five-member groups
+	# 57 = Toads (Blue, Green, Purple, Red, Yellow)
+	# 64 = Kritters (Green, Blue, Red, Brown)
 	if n==57 or n==64:
 		return 5
+
 	# Six-member groups
+	# 75 = Yoshis (Blue, Light Blue, Green, Pink, Red, Yellow)
 	if n==75:
 		return 6
-	# Single character (default)
+
+	# Single character (default) - not part of any group
 	return 1
 
-#Chem functions
+# Chem functions
 
 def currentChem():
 	"""
@@ -872,10 +919,12 @@ def currentChem():
 	chemRecap.configure(state="disabled")				
 
 def dirChange():
+	"""Update UI text for one-sided chemistry direction (A → B)."""
 	chemText.configure(text="to")
 	chemColor()
 
 def dirReset():
+	"""Update UI text for two-sided chemistry direction (A ↔ B)."""
 	chemText.configure(text="with")
 	chemColor()
 
@@ -923,11 +972,33 @@ def chemColor(*args):
 	chemText.configure(fg=color)
 	
 def simpleChemChange(start,end,chem,direction):
+	"""
+	Set chemistry value between two characters.
+
+	Args:
+		start: Character index in charList (0-100)
+		end: Character index in charList (0-100)
+		chem: Chemistry value (0=negative, 1=neutral, 2=positive)
+		direction: 1=one-way, 2=both ways (symmetric)
+
+	Chemistry is stored as a matrix where chemistry[start][end] represents
+	how 'start' feels about 'end'.
+	"""
 	changedChem[start][end]=chem
 	if direction==2:
 		changedChem[end][start]=chem
 	
 def changeChem():
+	"""
+	Apply selected chemistry change between two character groups.
+
+	Uses UI selections to determine:
+	- Start/End characters or groups
+	- Chemistry type (negative/neutral/positive)
+	- Direction (one-way or both ways)
+
+	Updates chemistry matrix and refreshes UI colors.
+	"""
 	recapList.configure(state="normal")
 	if directionVar.get()==0:
 		recapList.insert(tk.END, "No direction set\n")
@@ -981,6 +1052,17 @@ def changeChem():
 	recapList.configure(state="disabled")
 	
 def globalChem():
+	"""
+	Apply global chemistry changes to all characters.
+
+	Options:
+	1. Reset to defaults
+	2. Set all to negative (bad chemistry)
+	3. Set all to neutral
+	4. Set all to positive (good chemistry)
+
+	Option to include or exclude Mii characters (indices 77-100).
+	"""
 	global changedChem
 	recapList.configure(state="normal")
 	choice=chemResetVar.get()
@@ -1021,6 +1103,12 @@ def globalChem():
 	chemColor()
 	
 def autoChem():
+	"""
+	Set all characters to have positive chemistry with themselves.
+
+	Sets diagonal of chemistry matrix to 2 (positive).
+	Useful for ensuring all characters have self-chemistry enabled.
+	"""
 	for i in range(101):
 		changedChem[i][i]=2
 	recapList.configure(state="normal")
@@ -1028,6 +1116,16 @@ def autoChem():
 	recapList.configure(state="disabled")
 	
 def variantChem():
+	"""
+	Set all character variants to have positive chemistry with each other.
+
+	Examples:
+	- All Yoshis (Green, Blue, Red, Yellow, etc.) will have good chemistry
+	- All Toads (Red, Blue, Green, Yellow, Purple) will have good chemistry
+	- All Dry Bones variants will have good chemistry
+
+	Uses getRCGroup() to identify which characters are variants of each other.
+	"""
 	for i in range(101):
 		G=getRCGroup(i)
 		if len(G)>1:
@@ -1040,6 +1138,21 @@ def variantChem():
 	recapList.configure(state="disabled")
 	
 def getRCGroup(i):
+	"""
+	Get the list of character indices that are variants of the same character type.
+
+	Args:
+		i: Character index in charList (0-100)
+
+	Returns:
+		list: Character indices that are variants of the same type
+		      Empty list if character has no variants or is unused
+
+	Example groups:
+	- Yoshis: Green, Red, Blue, Yellow, Light Blue, Pink (6 total)
+	- Toads: Red, Blue, Green, Yellow, Purple (5 total)
+	- Miis: Male and female version of each color (pairs)
+	"""
 	if i==6:
 		return [6,66,67,68,69,70] #yoshis
 	if i==12:
@@ -1070,6 +1183,19 @@ def getRCGroup(i):
 	return []
 	
 def chemFullRandom():
+	"""
+	Randomize all chemistry relationships with weighted probabilities.
+
+	Uses slider values to determine probabilities for each chemistry type:
+	- Bad/Neutral/Good chemistry ratios from sliders
+	- Optional: Include Miis (adds 24 more characters)
+	- Optional: Randomize Mii colors (ensure min/max characters per color)
+	- Optional: Separate variants (treat Yoshi colors as different)
+	- Optional: Allow self-chemistry (character having chemistry with itself)
+	- Optional: Asymmetric chemistry (A->B != B->A)
+
+	Chemistry values assigned randomly based on weighted probabilities.
+	"""
 	d=chemScaleBad.get()+chemScaleGood.get()+chemScaleNeutral.get()
 	pBad=chemScaleBad.get()/d
 	pNeutral=(chemScaleBad.get()+chemScaleNeutral.get())/d
@@ -1159,10 +1285,25 @@ def enableRCColors():
 	chemRCMin.configure(state="readonly")
 	chemRCLabel1.configure(state=tk.NORMAL)
 	chemRCLabel2.configure(state=tk.NORMAL)
-	
-#Stats Functions
-	
+
+# Stats Functions
+
 def statCheckButton(name):
+	"""
+	Enable/disable a stat spinbox based on its checkbox state.
+
+	Args:
+		name: Stat index as string (e.g., "0", "10", "26")
+
+	Behavior:
+	- If checkbox unchecked: Disable the spinbox
+	- If checkbox checked: Enable as normal or readonly (depending on stat type)
+	- Special case: Star swing (stat 7) disabled if not a captain
+
+	Stat types:
+	- Readonly: Categorical stats (stance, class, captain, abilities, trajectory)
+	- Normal: Numeric stats (speeds, power, contact, etc.)
+	"""
 	var="sbStat"+name
 	if eval("checkStat"+name).getvar(eval("checkStat"+name).cget("variable"))=="0":
 		eval(var).configure(state="disabled")
@@ -1175,6 +1316,20 @@ def statCheckButton(name):
 		eval(var).configure(state=state)
 
 def statDisplay(clear):
+	"""
+	Refresh stat display UI for selected character or group.
+
+	Args:
+		clear: Boolean
+		       True = clear all spinboxes and reset selection
+		       False = populate spinboxes with character/group stats
+
+	For single characters: Shows exact stat values
+	For groups: Shows "min - max" range if values differ, exact value if same
+	For categorical stats: Shows empty if group members differ
+
+	Updates all 30 stat spinboxes in the Manual Stats tab.
+	"""
 	if(cbPlayer.get()=="Pick a character/group"):
 		return
 	if clear:
@@ -1562,8 +1717,8 @@ def resetStatsAE():
 		statDisplay(1)
 	else:
 		statDisplay(0)
-	
-#Stat Randomizer functions
+
+# Stat Randomizer functions
 
 def randCheckButton(name):
 	var="randStat"+name
@@ -1642,28 +1797,71 @@ def variationMode():
 		
 		
 def linkPitch():
+	"""Enable/disable pitch constraint percentage spinbox based on checkbox."""
 	if randLinkPitchVar.get():
 		randLinkPitchSb.configure(state="normal")
 	else:
 		randLinkPitchSb.configure(state="disabled")
 
 def linkContact():
+	"""Enable/disable contact constraint percentage spinbox based on checkbox."""
 	if randLinkContactVar.get():
 		randLinkContactSb.configure(state="normal")
 	else:
 		randLinkContactSb.configure(state="disabled")
 
 def linkPower():
+	"""Enable/disable power constraint percentage spinbox based on checkbox."""
 	if randLinkPowerVar.get():
 		randLinkPowerSb.configure(state="normal")
 	else:
 		randLinkPowerSb.configure(state="disabled")
 		
 def randomizeStats():
+	"""
+	Generate randomized stats for selected characters with constraints.
+
+	Features:
+	- Per-stat min/max/range controls
+	- Constraint linking (e.g., charge power > slap power by X%)
+	- Overall bar recalculation (pitching/batting/fielding/speed)
+	- Normal vs uniform distribution option
+	- Variation mode (randomize around current values vs full range)
+	- Double ability prevention (can't have both fielding & baserunning ability)
+
+	Constraints (optional):
+	1. Pitching Bar Constraint:
+	   - Forces charge pitch speed >= curveball speed by X%
+	   - Ensures fastball > curveball (realistic pitching)
+
+	2. Contact Constraint:
+	   - Forces charge contact <= slap contact by X%
+	   - Reflects game mechanics (slap hits have larger contact zones)
+
+	3. Power Constraint:
+	   - Forces charge power >= slap power by X%
+	   - Reflects game mechanics (charged hits should be stronger)
+
+	Overall Bars (recalculated if option enabled):
+	- Pitching: 25% curveball speed + 25% charge pitch speed + 50% curve
+	- Batting: 12.5% slap contact + 12.5% charge contact + 37.5% slap power + 37.5% charge power
+	- Fielding: Based on fielding stat
+	- Speed: Based on speed stat
+	- All clamped to 1-9 range
+
+	Distribution modes:
+	- Slider at 0: Uniform random distribution
+	- Slider at 10: Normal distribution (bell curve, centered on midpoint)
+
+	Variation mode:
+	- Off: Randomize within full min/max range
+	- On: Randomize within ±range of current value (clamped to min/max)
+	"""
 	recapList.configure(state="normal")
 	playerList=randPlayerList.copy()
 	if randStatEveryPlayerVar.get():
 		playerList=list(range(124))
+		# Remove group headers (indices that are group parents, not individual characters)
 		for i in [10,18,27,30,33,39,46,53,57,64,75,82,85,88,91,94,97,100,103,106,109,112,115]:
 			playerList.remove(i)	  
 	nPlayers=len(playerList)
@@ -1901,7 +2099,11 @@ def randomizeStats():
 	recapList.insert(tk.END,message+"\n")
 	recapList.configure(state="disabled")
 	
-#Traj functions
+# ===== TRAJECTORY EDITING FUNCTIONS =====
+#
+# Functions for editing hit trajectory curves in the Trajectory Editor tab.
+# Users can modify the 24 trajectory curves (6 types × 4 ball variants).
+# Each curve has 25 height values that define the ball's flight arc.
 
 def trajDisplay(clear):
 	"""
@@ -1941,6 +2143,13 @@ def trajChanged(event):
 	trajDisplay(0)
 
 def changedTrajListUsed():
+	"""
+	Update the active trajectory list based on enabled/disabled trajectories.
+
+	Rebuilds trajList from trajAllList, including only enabled trajectories.
+	Updates the trajectory dropdown in the stats editor UI.
+	Called when trajectories are enabled/disabled in the trajectory editor.
+	"""
 	global trajList
 	trajList=[]
 	for i in range(6):
@@ -2033,8 +2242,8 @@ def resetTraj():
 	trajDisplay(0)
 	recapList.insert(tk.END,group+" trajectory heights reset\n")
 	recapList.configure(state="disabled")
-	
-#Gecko code and saving functions
+
+# Gecko code and saving functions
 
 # Character indices that are captains by default in the game
 # 0: Mario, 1: Luigi, 2: Donkey Kong, 3: Diddy Kong, 4: Peach, 5: Daisy
@@ -2057,6 +2266,22 @@ def getCaptain(i):
 		return 0
 
 def getTeam(i):
+	"""
+	Get the default team ID for a character.
+
+	Args:
+		i: Character index in charList (0-123)
+
+	Returns:
+		int: Team ID (1-12 for captains, 0 for non-team characters)
+
+	Team assignments:
+	- 0-5: Team IDs 1-6 (Mario, Luigi, DK, Diddy, Peach, Daisy)
+	- 6: Green Yoshi → Team 9
+	- 9: Bowser → Team 11
+	- 10-11: Wario/Waluigi → Teams 7-8
+	- 17,19: Birdo/Bowser Jr. → Teams 10,12
+	"""
 	if i<6:
 		return i+1
 	if i==6:
@@ -2070,6 +2295,26 @@ def getTeam(i):
 	return 0
 
 def getStatOffset(j):
+	"""
+	Get memory offset for a stat within character data block.
+
+	Each character occupies 142 bytes in game memory:
+	- Bytes 0-2: Character ID and basic info
+	- Bytes 3-40: Stats (some are 1 byte, some are 2 bytes)
+	- Bytes 41-141: Chemistry values (101 bytes)
+
+	Args:
+		j: Stat index in statsList (0-29)
+
+	Returns:
+		int: Byte offset within character's 142-byte block
+
+	Stat layout:
+	- Stats 0-10: Single-byte stats at offsets 3-13
+	- Stats 11-18: Two-byte stats (contact, power, etc.)
+	- Stats 19-22: Single-byte display stats
+	- Stats 23-28: Two-byte stats (speeds, stamina)
+	"""
 	if j<11:
 		return j+3
 	if j<19:
@@ -2104,6 +2349,32 @@ def getStatOffset(j):
 # - Maximum code size: ~380 lines (game limit)
 
 def simpleAdvance(stat,default,L):
+	"""
+	Accumulate a single byte for Gecko code generation.
+
+	Accumulates bytes into 4-byte or multi-byte write commands.
+	Tracks whether current value differs from default (optimization).
+
+	Args:
+		stat: Current stat byte value to write
+		default: Default stat byte value from game
+		L: State list [is4, is6, count40, count68, count60, stock41, stock42, code, code6, startAddress]
+
+	Returns:
+		Updated state list
+
+	State variables:
+		is4: Boolean (0/1) - Currently building a 4-byte write
+		is6: Boolean (0/1) - Currently building a multi-byte write
+		count40: Bytes accumulated for 04 command (0-3, cycles)
+		count68: Total bytes accumulated for 06 command
+		count60: Flag for 06 command state
+		stock41: Accumulated byte string for current 4-byte group
+		stock42: Accumulated byte string for previous 4-byte group
+		code: Generated 04 codes (string)
+		code6: Generated 06 code data (string)
+		startAddress: Current memory address (hex string)
+	"""
 	is4=L[0]
 	is6=L[1]
 	count40=L[2]
@@ -2119,10 +2390,30 @@ def simpleAdvance(stat,default,L):
 		is4=1
 	count40=(count40+1)%4
 	L.clear()
-	L=[is4,is6,count40,count68,count60,stock41,stock42,code,code6,startAddress]  
+	L=[is4,is6,count40,count68,count60,stock41,stock42,code,code6,startAddress]
 	return L.copy()
 	
 def advanceCount(stat,default,address,L):
+	"""
+	Advance Gecko code generation by one byte and emit codes when ready.
+
+	Calls simpleAdvance() then checks if a 4-byte group is complete.
+	When complete, decides whether to emit a 04 code or continue building 06 code.
+
+	Args:
+		stat: Current stat byte value
+		default: Default stat byte value
+		address: Current memory address being written
+		L: State list from simpleAdvance()
+
+	Returns:
+		Updated state list
+
+	Emits Gecko codes when:
+	- 4 bytes accumulated and all match defaults → skip
+	- 4 bytes accumulated and some differ → emit 04 or continue 06
+	- Switching from consecutive writes to non-consecutive → emit 06
+	"""
 	L=simpleAdvance(stat,default,L.copy())
 	is4=L[0]
 	is6=L[1]
@@ -2170,6 +2461,24 @@ def advanceCount(stat,default,address,L):
 	return L.copy()
 
 def resetCount(address,L):
+	"""
+	Finalize and emit any pending Gecko codes, then reset state.
+
+	Called at the end of each data section (stats, chemistry, trajectory, etc.)
+	to flush any accumulated codes and prepare for the next section.
+
+	Args:
+		address: Final memory address for this section
+		L: Current state list
+
+	Returns:
+		Reset state list with all pending codes emitted
+
+	Handles three cases:
+	1. Pending 04 code: Emit it
+	2. Pending 06 code: Emit with byte count
+	3. Partial bytes remaining: Emit with padding
+	"""
 	is4=L[0]
 	is6=L[1]
 	count68=L[3]
@@ -2207,6 +2516,32 @@ def resetCount(address,L):
 	return L.copy()
 
 def geckoGenerate(listPlayers,exclude):
+	"""
+	Generate Gecko cheat code for modified character data.
+
+	Creates optimized Gecko codes that patch game memory with modified stats,
+	chemistry, and trajectory data. Only writes values that differ from defaults.
+
+	Args:
+		listPlayers: List of character indices (0-100) to include in code
+		exclude: Boolean - if True, reset non-selected characters to defaults
+		         if False, keep non-selected characters as-is
+
+	Returns:
+		str: Gecko code (multi-line string, ready to paste into Dolphin)
+
+	Memory addresses:
+		0x6CFA27 (7137703): Character stats/chemistry (142 bytes each)
+		0x62A8DC (6463836): Trajectory types (2 bytes per character)
+		0x6291A4 (6457636): Stamina values (2 bytes per character)
+		0x62914C (6457532): Star pitch types (1 byte per character)
+		0x627A08 (6450824): Trajectory height curves (24 curves × 25 values)
+
+	Optimization strategy:
+		- Only write bytes that differ from defaults
+		- Group consecutive writes into 06 commands (more efficient)
+		- Use 04 commands for isolated 4-byte writes
+	"""
 	baseAddress=7137703
 	baseTraj=6463836
 	baseStamina=6457636
@@ -2517,8 +2852,6 @@ def loadChanges():
             chem = ""
             stat = ""
             traj = ""
-
-            # ... (The rest of your original data-reading logic is perfect) ...
             
             # chemistry lines
             for i in range(100):
@@ -2584,6 +2917,13 @@ def loadChanges():
                     trajUsed[i] = int(useds[i])
 
             changedTrajListUsed()
+            # Refresh trajectory editor dropdown to use loaded names
+            trajGroup.config(values=trajAllList)
+            trajGroup.set("Pick a trajectory")
+
+            trajDisplay(1)
+            chemColor()
+
             trajDisplay(1)
             chemColor()
             
@@ -2751,12 +3091,31 @@ def clearPlayersGecko():
 	geckoPlayerList.clear()
 	refreshGeckoText()
 
-#Wacky functions
+# Wacky functions
 
 def fixWalu():
 	changedStat[11][11]=1
 	
 def reverseStats():
+	"""
+	Reverse all numeric stats (make low stats high and high stats low).
+
+	Fun "wacky" feature that inverts stat values:
+	- Low-stat characters become overpowered
+	- High-stat characters become weak
+
+	Formula: new_stat = max_stat - current_stat
+	Example: If max contact is 125 and character has 75, new value is 50
+
+	Special handling:
+	- Trajectory stat: Cycles through Low/Medium/High
+	- Waluigi's charge contact: Fixed to prevent crash (bug workaround)
+
+	Does NOT reverse:
+	- Pitching/batting stance (would break animations)
+	- Captain status (meaningless to reverse)
+	- Star abilities (categorical, not numeric)
+	"""
 	L=[0,0,3,0,4,0,0,0,0,0,125,90,75,110,100,100,110,105,10,10,10,10,220,255,95,0,0,0,120]
 	for j in [2,4,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,28]:
 		for i in range(101):
@@ -2773,6 +3132,16 @@ def reverseStats():
 	recapList.configure(state="disabled")
 
 def reverseChem():
+	"""
+	Reverse all chemistry relationships (good becomes bad, bad becomes good).
+
+	Fun "wacky" feature that flips chemistry values:
+	- Positive (2) → Negative (0)
+	- Negative (0) → Positive (2)
+	- Neutral (1) stays Neutral (1)
+
+	Creates opposite team dynamics: friends become enemies, enemies become friends.
+	"""
 	for i in range(101):
 		for j in range(101):
 			changedChem[i][j]=(2-changedChem[i][j])%3
@@ -2782,6 +3151,16 @@ def reverseChem():
 	recapList.configure(state="disabled")
 	
 def reverseHand():
+	"""
+	Reverse pitching and batting handedness for all characters.
+
+	Fun "wacky" feature that swaps Left ↔ Right:
+	- Right-handed pitchers become left-handed
+	- Left-handed batters become right-handed
+	- And vice versa
+
+	Changes both pitching stance (stat 0) and batting stance (stat 1).
+	"""
 	for i in range(101):
 		changedStat[i][0]=1-changedStat[i][0]
 		changedStat[i][1]=1-changedStat[i][1]
@@ -2813,11 +3192,24 @@ def devMode():
 		recapList.configure(state="disabled")
 
 
-#main loop
+# ===== GUI INITIALIZATION =====
+#
+# This section creates the main application window and all UI components.
+# The editor uses a tabbed interface with 7 tabs:
+# 1. Chemistry Editor - Edit character chemistry relationships
+# 2. Stats Editor - Manually edit character stats
+# 3. Stats Randomizer - Randomize stats with constraints
+# 4. Traj Heights Editor - Edit trajectory height curves
+# 5. Gecko Code - Generate codes for Dolphin emulator
+# 6. Wacky Stuff - Fun features (reverse stats, swap hands, etc.)
+# 7. Credits - Application credits and information
+
+# === MAIN WINDOW ===
 root = tk.Tk()
 root.geometry("1200x720")
 
-#recap setup
+# === RECAP/LOG PANEL ===
+# Left-side panel showing operation results and error messages
 
 recapFrame = tk.LabelFrame(root, text="Changes Made")
 recapFrame.pack(side=tk.LEFT,anchor=tk.N,padx=5)
@@ -2827,9 +3219,10 @@ recapScrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 recapList = tk.Text(recapFrame, height = 42, width = 50,
 					state="disabled", wrap="word", yscrollcommand=recapScrollbar.set)
 recapList.pack()
-recapScrollbar.config(command = recapList.yview) 
+recapScrollbar.config(command = recapList.yview)
 
-#tabs setup
+# === TABBED NOTEBOOK ===
+# Main UI area with 7 tabs for different editing features
 
 statsTabs = ttk.Notebook(root)
 statsTabs.pack(side=tk.LEFT,anchor=tk.N,padx=5)
@@ -2856,8 +3249,12 @@ creditsFrame = tk.Frame(statsTabs)
 creditsFrame.pack()
 statsTabs.add(creditsFrame, text="Credits")
 
-#Chemistry setup
+# ===== TAB 1: CHEMISTRY EDITOR =====
+#
+# UI for editing character chemistry relationships (101x101 matrix).
+# Features: Individual edits, global changes, randomization, auto-chemistry.
 
+# Chemistry direction and type selectors
 destinationFrame = tk.Frame(chemistryFrame)
 destinationFrame.grid(row=0,column=0)
 dirlabel = tk.Label(destinationFrame, text = "Choose direction")
@@ -3000,7 +3397,11 @@ chemRecap = tk.Text(chemRecapFrame, height = 39, width = 25,
 chemRecap.pack()
 chemRecapScrollbar.config(command = chemRecap.yview)
 
-#Stats editor setup
+# ===== TAB 2: MANUAL STATS EDITOR =====
+#
+# UI for manually editing character stats (30 stats per character).
+# Features: Character/group selector, 30 stat spinboxes, batch operations.
+# Stats organized into groups: Basic Info, Special Moves, Pitching, Batting, Fielding, Overall Bars.
 
 glitchFrame = tk.LabelFrame(manualStatsFrame, text="Warning : modifying can cause graphical glitches", fg="DarkOrange2")
 glitchFrame.grid(row=1,column=0,rowspan=2, columnspan=2, sticky=tk.EW)
@@ -3154,7 +3555,10 @@ statsAllResetEveryone = tk.Button(statsActionFrame, text="Reset All Stats for ev
 statsAllResetEveryone.pack(pady=(0,5))
 
 
-#Stat Randomizer
+# ===== TAB 3: STAT RANDOMIZER =====
+#
+# UI for randomizing character stats with constraints and distribution controls.
+# Features: Per-stat min/max/range, constraint linking, distribution modes, variation mode.
 
 randPlayerList = []
 
@@ -3392,7 +3796,10 @@ randLinkPowerSb = ttk.Spinbox(randLinkFrame, from_=0, to=100, state="disabled")
 randLinkPowerSb.grid(row=2, column=1)
 randLinkPowerSb.set(25)
 
-#Traj Heights Code
+# ===== TAB 4: TRAJECTORY HEIGHTS EDITOR =====
+#
+# UI for editing hit trajectory height curves (24 curves × 25 height values).
+# Features: Trajectory selector, ball type selector, 25 height spinboxes, curve management.
 
 labelTrajGroup = tk.Label(trajFrame, text="Select a trajectory to edit :")
 labelTrajGroup.grid(row=0, column=0)
@@ -3462,9 +3869,14 @@ trajResetTraj.grid(row=22,column=3,columnspan=2)
 trajLabelExplanation = tk.Label(trajFrame, text="If the values in a set don't sum to 100, they will get updated to reflect how the game would interpret them")
 trajLabelExplanation.grid(row=23,column=0,columnspan=6)
 
-#Gecko Code
+# Gecko Code
 
 geckoPlayerList = []
+
+# ===== TAB 5: GECKO CODE GENERATOR =====
+#
+# UI for generating Gecko cheat codes for the Dolphin emulator.
+# Features: Character selection, preset loading/saving, code display with copy-to-clipboard.
 
 geckoDisplayFrame = tk.Frame(geckoFrame)
 geckoDisplayFrame.grid(row=0, column=4, rowspan=40, padx=5)
@@ -3539,7 +3951,10 @@ geckoRemovePlayer.pack(side=tk.TOP, padx=5, pady=5)
 geckoClearSelection = tk.Button(geckoPlayersFrame, text="Clear selection", command=clearPlayersGecko)
 geckoClearSelection.pack(side=tk.TOP, padx=5, pady=5)
 
-#Wacky Stuff
+# ===== TAB 6: WACKY STUFF =====
+#
+# UI for fun experimental features (reverse stats, swap handedness, dev mode).
+# These features create unusual/humorous gameplay modifications.
 
 wackyInverseChem = tk.Button(wackyFrame, text="Reverse Chem", command=reverseChem)
 wackyInverseChem.grid(row=0, column=0)
@@ -3563,7 +3978,9 @@ wackyPost.pack()
 All chem special code
 '''
 
-#Credits
+# ===== TAB 7: CREDITS =====
+#
+# Credits and acknowledgments for contributors to the project.
 
 credits1 = tk.Label(creditsFrame, text="Thanks to :", font=('Arial',15))
 credits1.pack(pady=10)
